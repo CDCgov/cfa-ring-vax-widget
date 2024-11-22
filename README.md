@@ -10,8 +10,9 @@ app.
 
 ## Authors
 
-Scott Olesen <ulp7@cdc.gov> Andy Magee <rzg0@cdc.gov> Paige Miller
-<yub1@cdc.gov>
+- Scott Olesen <ulp7@cdc.gov>
+- Andy Magee <rzg0@cdc.gov>
+- Paige Miller <yub1@cdc.gov>
 
 ## General Disclaimer
 
