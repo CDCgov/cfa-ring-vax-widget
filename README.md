@@ -1,18 +1,74 @@
 # Ring vaccination widget
 
-⚠️ This is a work in progress
-
 ## Overview
 
 This repo contains code for investigating the potential efficacy of ring
 vaccination for a disease interactively via a [streamlit](https://streamlit.io/)
 app.
 
-## Authors
+## Model description
 
-- Scott Olesen <ulp7@cdc.gov>
-- Andy Magee <rzg0@cdc.gov>
-- Paige Miller <yub1@cdc.gov>
+- Disease progression: susceptible, exposed (i.e., will go onto infection),
+  infectious, recovered
+- Individuals make contacts on some network, with some contact rate. Some
+  contacts are effective (i.e., can transmit infection).
+- Each infected individual can be detected. E.g., infected people might notice
+  their own symptoms.
+- When an infected person is detected, contact tracing and isolation are
+  initiated.
+  - Contact tracing
+    - Contact tracing can detect infections among contacts, contacts of
+      contacts, etc.
+    - Contact tracing has different performance characteristics for each “ring.”
+  - Isolation reduces transmission by some factor (which might be 100%) for that
+    individual.
+- Input parameters/assumptions for this model
+  - Latent period $t_\mathrm{latent}$ distribution (time from contact to onset
+    of infectiousness)
+  - Infectious period $t_\mathrm{inf}$ distribution
+  - Basic reproductive number $R_0$ (i.e., mean number of secondary infections
+    per index infection in the absence of intervention)
+    - Note: this defines some mean infectious rate $R_0 / E[t_\mathrm{inf}]$
+    - Assume that this infectious rate is constant over the period of
+      infectiousness. E.g., if perfectly effective isolation is implemented
+      halfway through an individual’s infectious period, that halves their
+      number of expected secondary infections.
+    - Some distribution of number of secondary infections around $R_0$ (e.g.,
+      Poisson)
+    - Assume that the number of secondary infections is uncorrelated across
+      individuals (i.e., there is some kind of homogeneity in the contact
+      network).
+  - Per-infection detection (aka "passive" detection, in which individuals
+    identify their own symptoms)
+    - % of infections identified in this way (in the absence of contact tracing)
+    - Distribution of times from exposure to detection
+  - Contact tracing
+    - % of first ring (contacts) identified
+    - Distribution of times from index exposure to contact identification (and
+      what to do if this is unphysically short, i.e. before the contact would
+      test positive)
+    - % of second ring (contacts of contacts) identified
+    - Distribution of times for second ring
+    - No third ring infections (i.e., contacts of contacts of contacts) can be
+      detected via the index case
+- Implementation/initialization
+  - Seed a single infection (e.g., exposed via travel)
+  - If we assume that there is no third ring contact tracing, then each
+    undetected contact and contact-of-contact is equivalent to a new index
+    infection. So then the frame of the simulation can be a single infection,
+    contacts, and contacts-of-contacts.
+- Output/viz
+  - Some discrete realizations, showing the timelines of events for individuals
+    (e.g., how the different disease state periods line up in time)
+  - Distribution of number of undetected
+- Assumptions of note
+  - Assuming independence is conservative: clustering helps you
+
+## Project Admins
+
+- Scott Olesen (CDC/CFA) <ulp7@cdc.gov>
+- Andy Magee (CDC/CFA) <rzg0@cdc.gov>
+- Paige Miller (CDC/CFA) <yub1@cdc.gov>
 
 ## General Disclaimer
 
