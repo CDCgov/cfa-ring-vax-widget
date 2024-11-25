@@ -5,9 +5,16 @@ from typing import Any, Iterable, Optional, Self, Sequence
 import numpy as np
 
 Event = namedtuple("Event", ["type", "time", "individual"])
+"""
+Events are things like "individual X causes an infection at time T"
+"""
 
 
 class Individual(ABC):
+    """
+    An infected individual which can infect others.
+    """
+
     def __init__(
         self,
         params: dict[str, Any],
@@ -21,33 +28,32 @@ class Individual(ABC):
         self.time = time
         self.ancestry: tuple[Self, ...] = tuple(ancestry)
 
-    def apply_event(self) -> None:
+    def apply_event(self, Event) -> None:
+        """
+        Resolve event, e.g. moving from Exposed to Infectious
+        """
+        raise NotImplementedError()
+
+    def generate_infection(self, time: float) -> Self:
+        """
+        Get a new infected resulting from this infector at given time.
+        """
         raise NotImplementedError()
 
     def next_event(self, **kwargs) -> Event:
+        """
+        What is the next Event for this individual.
+        """
         raise NotImplementedError()
 
     def starting_state(self) -> str:
+        """
+        Default starting state for an individual, e.g. I for SIR, E for SEIR
+        """
         raise NotImplementedError()
 
     def validate_params(self) -> None:
         pass
-
-
-class BdsSeirIndividual(Individual):
-    par_names = ("birth_rate", "death_rate", "sampling_rate", "ei_rate")
-    par_types = (float,) * len(par_names)
-
-    def validate_params(self):
-        for p, t in zip(
-            BdsSeirIndividual.par_names, BdsSeirIndividual.par_types
-        ):
-            assert p in self.params and isinstance(self.params[p], t)
-
-
-class InfectionHandler(ABC):
-    def __call__(self, infector: Individual, **kwargs) -> Individual:
-        raise NotImplementedError()
 
 
 class Population(ABC):
@@ -55,44 +61,66 @@ class Population(ABC):
         self, init_infecteds: Iterable[Individual], time: float = 0.0
     ):
         self.infecteds = list(init_infecteds)
-        self.deterministic_event_stack: list[Event] = list()
+        self.event_stack: list[Event] = list()
         self.time = time
 
     # Recover, vaccinate, etc.
     def handle_next_event(self, individual: Individual, event: Event) -> None:
         raise NotImplementedError()
 
-    def next_event(self) -> tuple[Individual, Event]:
+    def next_individual_level_event(self) -> tuple[Individual, Event]:
+        """
+        Find next event (presumably but not necessarily leaning on self.infecteds' next_event())
+        """
         raise NotImplementedError()
 
     def next_infection_to(self, infector: Individual) -> Individual:
-        raise NotImplementedError()
-
-    def num_infected(self) -> int:
+        """
+        What individual is infected by stated infector?
+        """
         raise NotImplementedError()
 
     def ring_vaccinate(
-        self, order, target: Individual, ve: float, rampup: float, **kwargs
+        self,
+        max_degree,
+        target: Individual,
+        ve: float,
+        rampup: float,
+        **kwargs
     ) -> None:
-        for individ in self.get_ring(order, target, **kwargs):
+        """
+        Get ring around individual, apply vaccines
+        """
+        for individ in self.get_ring(max_degree, target, **kwargs):
             self.vaccinate(individ, ve, rampup)
 
-    def vaccinate(
-        self, individual: Individual, ve: float, rampup: float
-    ) -> None:
+    def step(self):
+        """
+        Advance simulation by one event
+        """
+
+    def vaccinate(self, target: Individual, ve: float, rampup: float) -> None:
+        """
+        Register with population intent to apply "all or nothing" vaccination to target individual.
+
+        Individual will be removed with probability given by VE when vaccine becomes effective (given by rampup).
+        """
         # "all or nothing vaccination"
         if np.random.uniform(0, 1) <= ve:
-            self.deterministic_event_stack.append(
+            self.event_stack.append(
                 Event(
                     type="vaccination",
                     time=self.time + rampup,
-                    individual=individual,
+                    individual=target,
                 )
             )
 
     def get_ring(
-        self, order: int, individual: Individual, **kwargs
+        self, max_degree: int, target: Individual, **kwargs
     ) -> Iterable[Individual]:
+        """
+        Get contacts (and potentially contacts of contacts of... out to max_degree) target individual.
+        """
         # Depends on:
         #    - population model, e.g. in a branching process, this is just the already-infected children
         #    - detection model, e.g., do we see everyone or not?
