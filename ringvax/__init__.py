@@ -1,4 +1,5 @@
-from abc import ABC
+import math
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Iterable, Optional, Self, Sequence
 
@@ -7,7 +8,25 @@ import numpy as np
 Event = namedtuple("Event", ["type", "time", "individual"])
 """
 Events are things like "individual X causes an infection at time T"
+
+Conventions for types:
+  infection: a new infection arises
+  recovery: an individual becomes non-infectious
+  detection: a pre-existing infection is detected
+  transition_[from]_[to]: moving between states of infection, such as exposure to infectiousness
 """
+
+
+class EventArgMin(ABC):
+    """
+    From a set of events, determine which happens first.
+
+    This handles time tie-breaking via event prioritization and as-needed randomization
+    """
+
+    @abstractmethod
+    def __call__(self, events: Iterable[Event]) -> Event:
+        raise NotImplementedError()
 
 
 class Individual(ABC):
@@ -28,24 +47,28 @@ class Individual(ABC):
         self.time = time
         self.ancestry: tuple[Self, ...] = tuple(ancestry)
 
+    @abstractmethod
     def apply_event(self, Event) -> None:
         """
         Resolve event, e.g. moving from Exposed to Infectious
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def generate_infection(self, time: float) -> Self:
         """
         Get a new infected resulting from this infector at given time.
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def next_event(self, **kwargs) -> Event:
         """
         What is the next Event for this individual.
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def starting_state(self) -> str:
         """
         Default starting state for an individual, e.g. I for SIR, E for SEIR
@@ -53,27 +76,45 @@ class Individual(ABC):
         raise NotImplementedError()
 
     def validate_params(self) -> None:
+        """
+        Check arguments are valid, error if not, default is permissive
+        """
         pass
 
 
 class Population(ABC):
+    """
+    A group of Individuals, plus emergent properties.
+    """
+
     def __init__(
-        self, init_infecteds: Iterable[Individual], time: float = 0.0
+        self,
+        init_infecteds: Iterable[Individual],
+        next_event: EventArgMin,
+        time: float = 0.0,
     ):
         self.infecteds = list(init_infecteds)
-        self.event_stack: list[Event] = list()
+        self.event_stack: list[Event] = list(
+            Event(type="dummy", time=math.inf, individual=None)
+        )
+        self.event_arg_min = EventArgMin()
         self.time = time
 
-    # Recover, vaccinate, etc.
-    def handle_next_event(self, individual: Individual, event: Event) -> None:
+    def handle_event(self, event: Event) -> None:
+        """
+        Resolve this event, e.g. call individual's apply_event() or remove vaccinated individuals, etc.
+        """
+        # Ring vaccination, removal from self.infecteds, new infecteds, etc.
         raise NotImplementedError()
 
-    def next_individual_level_event(self) -> tuple[Individual, Event]:
+    @abstractmethod
+    def next_individual_level_event(self) -> Event:
         """
-        Find next event (presumably but not necessarily leaning on self.infecteds' next_event())
+        Using Individual.next_event() and any other pertinent information, what would the next event be?
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def next_infection_to(self, infector: Individual) -> Individual:
         """
         What individual is infected by stated infector?
@@ -98,6 +139,12 @@ class Population(ABC):
         """
         Advance simulation by one event
         """
+        next_individ = self.next_individual_level_event()
+        next_pop = self.event_arg_min(self.event_stack)
+        next_comb = self.event_arg_min([next_individ, next_pop])
+
+        self.time = next_comb.time
+        self.handle_event(next_comb)
 
     def vaccinate(self, target: Individual, ve: float, rampup: float) -> None:
         """
@@ -109,12 +156,13 @@ class Population(ABC):
         if np.random.uniform(0, 1) <= ve:
             self.event_stack.append(
                 Event(
-                    type="vaccination",
+                    type="recovery",
                     time=self.time + rampup,
                     individual=target,
                 )
             )
 
+    @abstractmethod
     def get_ring(
         self, max_degree: int, target: Individual, **kwargs
     ) -> Iterable[Individual]:
