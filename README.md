@@ -10,8 +10,10 @@ app.
 
 - Disease progression: susceptible, exposed (i.e., will go onto infection),
   infectious, recovered
-- Individuals make contacts on some network, with some contact rate. Some
-  contacts are effective (i.e., can transmit infection).
+- Individuals make contacts on some network, with some effective (i.e.,
+  infection transmitting) contact rate. (Contact rates and effective contact
+  probability could be separated in parameter input, but they are perfectly
+  confounded in the model.)
 - Each infected individual can be detected. E.g., infected people might notice
   their own symptoms.
 - When an infected person is detected, contact tracing and isolation are
@@ -19,7 +21,11 @@ app.
   - Contact tracing
     - Contact tracing can detect infections among contacts, contacts of
       contacts, etc.
-    - Contact tracing has different performance characteristics for each “ring.”
+    - Contact tracing has different performance characteristics for each "ring."
+      (The most straightforward choice would be to make second ring performance
+      equivalent to first ring, i.e., time from detecting infected contact to
+      infected contact-of-contact is identical to time from detecting index
+      infection to infected contact.)
   - Isolation reduces transmission by some factor (which might be 100%) for that
     individual.
 - Input parameters/assumptions for this model
@@ -31,7 +37,7 @@ app.
     - Note: this defines some mean infectious rate $R_0 / E[t_\mathrm{inf}]$
     - Assume that this infectious rate is constant over the period of
       infectiousness. E.g., if perfectly effective isolation is implemented
-      halfway through an individual’s infectious period, that halves their
+      halfway through an individual's infectious period, that halves their
       number of expected secondary infections.
     - Some distribution of number of secondary infections around $R_0$ (e.g.,
       Poisson)
@@ -41,22 +47,25 @@ app.
   - Per-infection detection (aka "passive" detection, in which individuals
     identify their own symptoms)
     - % of infections identified in this way (in the absence of contact tracing)
-    - Distribution of times from exposure to detection
+    - Distribution of times from exposure to detection (or, equivalently, from
+      exposure to symptom onset and from symptom onset to detection)
   - Contact tracing
     - % of first ring (contacts) identified
-    - Distribution of times from index exposure to contact identification (and
-      what to do if this is unphysically short, i.e. before the contact would
-      test positive)
-    - % of second ring (contacts of contacts) identified
-    - Distribution of times for second ring
-    - No third ring infections (i.e., contacts of contacts of contacts) can be
-      detected via the index case
+    - Distribution of times from index exposure to contact identification
+    - Time-varying performance of contact tracing (e.g., a simple assumption
+      would be that all infected contacts immediately stop infecting, i.e., that
+      the diagnostic test can identify infections with 100% sensitivity
+      immediately after exposure and isolation is 100% effective)
+    - % of second ring (contacts of contacts) identified, distribution of times,
+      etc.
+    - Third ring, etc.
 - Implementation/initialization
   - Seed a single infection (e.g., exposed via travel)
-  - If we assume that there is no third ring contact tracing, then each
-    undetected contact and contact-of-contact is equivalent to a new index
-    infection. So then the frame of the simulation can be a single infection,
-    contacts, and contacts-of-contacts.
+  - **_Open question_**: How to deal with multiple rings?
+    - What are the network implications of treating undetected infections as new
+      index infections (with independent but identically distributed number of
+      secondary infections)?
+    - How hard would it be to simulate contacts on a simple network?
 - Output/viz
   - Some discrete realizations, showing the timelines of events for individuals
     (e.g., how the different disease state periods line up in time)
