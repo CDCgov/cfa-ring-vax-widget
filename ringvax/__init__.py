@@ -1,10 +1,41 @@
 from collections import namedtuple
-from copy import copy
-from typing import Sequence
+from copy import deepcopy
+from typing import Iterable, Sequence
 
 import numpy as np
 
+# Particles, while simple, should be mutable to avoid painful unneeded copying and to preserve infection trees
 Particle = namedtuple("Particle", ["id", "state", "infector", "infectees"])
+
+SimulatorResults = namedtuple(
+    "SimulatorResults", ["pool", "condition_success"]
+)
+
+
+def count_generations(id, pool: Iterable[Particle]) -> int:
+    particle = next((part for part in pool if part.id == id), None)
+    assert (
+        particle is not None
+    ), f"Cannot find particle with id {id} in pool {pool}"
+    if len(particle.infectees) == 0:
+        return 0
+    else:
+        tip_gens = []
+        _count_generations(particle, pool, 0, tip_gens)
+        return max(tip_gens)
+
+
+def _count_generations(
+    particle: Particle, pool: Iterable[Particle], gen, gens: list
+) -> None:
+    if len(particle.infectees) == 0:
+        gens.append(gen)
+    else:
+        for infectee in particle.infectees:
+            id = infectee.id
+            child = next((part for part in pool if part.id == id), None)
+            assert child is not None
+            _count_generations(child, pool, gen + 1, gens)
 
 
 class BirthDeathParticlePool:
@@ -33,18 +64,39 @@ class BirthDeathParticlePool:
         self.ei_rate = per_capita_ei_rate
         self.recover_on_sample_prob = recover_on_sample_prob
         self.rng = rng
-        self.pool: list[Particle] = [
-            Particle(id=id, state=state, infector=None, infectees=[])
+        self.pool: tuple[Particle, ...] = tuple(
+            Particle(id=id, state=state, infector=None, infectees=tuple())
             for id, state in zip(infected_ids, states)
-        ]
+        )
+        self.removed: tuple[Particle, ...] = tuple()
+
+    def __contains__(self, particle: Particle):
+        for part in self.pool:
+            if part.id == particle.id:
+                return True
+        return False
 
     def birth(self, parent=None) -> tuple[str, Particle]:
         if parent is None:
             parent = self.rand_particle("infectious")
         child = Particle(
-            id=self.next_id(), state="exposed", infector=parent, infectees=[]
+            id=self.next_id(),
+            state="exposed",
+            infector=parent,
+            infectees=tuple(),
         )
-        self.pool.append(child)
+        new_parent = Particle(
+            id=parent.id,
+            state=parent.state,
+            infector=parent.infector,
+            infectees=parent.infectees + (child,),
+        )
+
+        self.pool = tuple(p for p in self.pool if p is not parent) + (
+            new_parent,
+            child,
+        )
+
         return (
             "birth",
             child,
@@ -53,9 +105,12 @@ class BirthDeathParticlePool:
     def death(self, particle=None) -> tuple[str, Particle]:
         if particle is None:
             particle = self.rand_particle("infectious")
+
+        self.pool = tuple(p for p in self.pool if p is not particle)
+        self.removed = self.removed + (particle,)
         return (
             "death",
-            self.pool.pop(self.pool.index(particle)),
+            particle,
         )
 
     def detection(self, particle=None) -> tuple[str, Particle]:
@@ -108,21 +163,41 @@ class BirthDeathParticlePool:
         )
         return getattr(self, event)()
 
-    def state_change(self, particle=None):
-        if particle is None:
-            particle = self.rand_particle("exposed")
-        exposed = self.pool.pop(self.pool.index(particle))
+    def state_change(self, exposed=None):
+        if exposed is None:
+            exposed = self.rand_particle("exposed")
+
         infectious = Particle(
             id=exposed.id,
             state="infectious",
             infector=exposed.infector,
             infectees=exposed.infectees,
         )
-        self.pool.append(infectious)
+        self.pool = tuple(p for p in self.pool if p is not exposed) + (
+            infectious,
+        )
         return (
             "state_change",
             infectious,
         )
+
+
+def ring_vaccinate(particle, pool, ring_vax_detect_prob):
+    contacts = list(particle.infectees)
+    if particle.infector is not None:
+        contacts.append(particle.infector)
+
+    while len(contacts) > 0:
+        contact = contacts.pop()
+        # particle's parent is a contact, but particle has already been handled
+        if (contact is not particle) and (
+            pool.rng.uniform(0.0, 1.0, size=1) < ring_vax_detect_prob
+        ):
+            # Use .detection() rather than .death() because .detection() includes possibility of nonremoval
+            contacts = [*contacts, *contact.infectees]
+        # Can't remove an already-removed particle
+        if contact in pool:
+            _ = pool.detection(contact)
 
 
 class BirthDeathSimulator:
@@ -130,31 +205,34 @@ class BirthDeathSimulator:
         self,
         starting_pool: BirthDeathParticlePool,
         ring_vax_detect_prob: float,
-        t_stop: float,
-    ):
-        pool = copy(starting_pool)
-        pool.pool = copy(starting_pool.pool)
-        rng = pool.rng
+        t_max: float,
+        stop_condition="time",
+    ) -> SimulatorResults:
+        pool = deepcopy(starting_pool)
         time = 0.0
+        condition_success = False
 
         while True:
             wt = pool.draw_waiting_time()
-            if time + wt >= t_stop:
+            if time + wt >= t_max:
                 break
 
             time = time + wt
             event, particle = pool.resolve_event()
 
             if event == "detection" and ring_vax_detect_prob > 0.0:
-                contacts = [particle.infector, *particle.infectees]
-                while len(contacts) > 0:
-                    contact = contacts.pop()
-                    if rng.uniform(0.0, 1.0, size=1) < ring_vax_detect_prob:
-                        # Use .detection() rather than .death() because .detection() includes possibility of nonremoval
-                        _ = pool.detection(contact)
-                        contacts = [*contacts, *contact.infectees]
+                ring_vaccinate(particle, pool, ring_vax_detect_prob)
+                if (
+                    particle.id == 0
+                    and stop_condition == "detect_index_passive"
+                ):
+                    condition_success = True
+                    break
 
             if len(pool.pool) == 0:
                 break
 
-        return pool
+        if stop_condition == "time":
+            condition_success = True if np.isclose(time, t_max) else False
+
+        return SimulatorResults(pool=pool, condition_success=condition_success)
