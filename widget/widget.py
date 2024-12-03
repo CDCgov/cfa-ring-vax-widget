@@ -83,7 +83,7 @@ def app():
 
     # Outbreak sizes with detection and contact tracing
     sizes = []
-    for _ in range(nsim):
+    for idx in range(nsim):
         sizes.append(
             len(
                 ringvax.BirthDeathSimulator()(
