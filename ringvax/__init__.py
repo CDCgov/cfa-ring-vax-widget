@@ -184,9 +184,6 @@ class BirthDeathParticlePool:
 
 def ring_vaccinate(particle, pool, ring_vax_detect_prob):
     contacts = list(particle.infectees)
-    if particle.infector is not None:
-        contacts.append(particle.infector)
-
     while len(contacts) > 0:
         contact = contacts.pop()
         # particle's parent is a contact, but particle has already been handled
