@@ -8,6 +8,59 @@ app.
 
 ## Model description
 
+### Skateboard version
+
+- Disease progression: susceptible, exposed/latent (i.e., will go onto
+  infection), infectious, recovered
+- Infection process
+  - Finite number of generations: index infection, generation 1 (contacts),
+    generation 2 (contacts of contacts), and generation 3
+  - Number of infections
+    - For first version, assume that all infections have i.i.d. number of
+      offspring (i.e., branching process)
+    - Index infection creates a number of generation 1 infections, drawn from
+      some distribution
+    - Generation 1 infections each create a number of generation 2 infections
+      - These values are drawn jointly (i.e., from a multivariate distribution)
+      - All network features are marginalized over this distribution
+      - The potential for correlations between numbers of infections (e.g., that
+        generation 2 infections might share contacts) are all baked into that
+        distribution
+    - Similarly for generations 2 and 3
+      - The distribution can vary between the three generations
+  - Timing of infections
+    - For first version, just space the infections uniformly in time
+    - For later versions, spacing them like for a Poisson process
+- Passive detection (i.e., self-detection)
+  - Each infection has an independent probability of passive detection
+  - If passively detected, detection occurs at some time distribution since
+    exposure
+  - (No assumption that index case is passively detected)
+- Contact tracing (i.e., active detection)
+  - Every detected infection (whether passive or active) has an independent
+    probability of triggering contact tracing
+  - Contact tracing has an independent probability of detecting each infection
+    caused by the detected infection
+  - "Detection" means detection _and_ successful intervention
+  - There is a distribution of times between triggering detection and contact
+    tracing completion
+- Input parameters/assumptions for this model
+  - Latent period $t_\mathrm{latent}$ distribution (time from contact to onset
+    of infectiousness)
+  - Infectious period $t_\mathrm{inf}$ distribution
+  - Infectious rate (which could be defined via $R_0 / E[t_\mathrm{inf}]$)
+  - Distribution of infections (start by making these independent, Poisson)
+  - Passive detection probability and delay distribution
+  - Contact tracing probability and delay distribution
+- Implementation/initialization
+  - Seed a single infection (e.g., exposed via travel)
+- Output/viz
+  - Some discrete realizations, showing the timelines of events for individuals
+    (e.g., how the different disease state periods line up in time)
+  - Distribution of number of undetected in generation 3
+
+### Fuller version
+
 - Disease progression: susceptible, exposed (i.e., will go onto infection),
   infectious, recovered
 - Individuals make contacts on some network, with some effective (i.e.,
