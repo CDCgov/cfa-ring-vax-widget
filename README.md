@@ -63,6 +63,12 @@ app.
 - Is the correlated draw of infections in each generation sufficient to describe
   certain network parameters? Or do you also need timing?
 
+### Out of scope
+
+- If two people in generation $g$ contact an infection in generation $g+1$, and
+  both of the $g$ infections are detected, does the $g+1$ infection get two
+  chances for contact tracing to work?
+
 ## Project Admins
 
 - Scott Olesen (CDC/CFA) <ulp7@cdc.gov>
