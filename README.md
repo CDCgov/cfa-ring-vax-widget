@@ -87,6 +87,12 @@ app.
 
 - Define a "successful" simulation as one with zero 4th-generation infections
 
+### Out of scope
+
+- If two people in generation $g$ contact an infection in generation $g+1$, and
+  both of the $g$ infections are detected, does the $g+1$ infection get two
+  chances for contact tracing to work?
+
 ## Project Admins
 
 - Scott Olesen (CDC/CFA) <ulp7@cdc.gov>
