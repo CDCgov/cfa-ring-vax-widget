@@ -31,7 +31,8 @@ app.
   - Each infection has an independent probability of passive detection
   - If passively detected, detection occurs at some time distribution since
     exposure.
-    - Start with Dirac delta distribution.
+    - Start with Dirac delta distribution (i.e., all passively-detected
+      infections are detected at some fixed delay after exposure)
     - N.B.: This assumes that progression of infectiousness and symptoms are
       independent. We could not say that, e.g., symptoms being immediately upon
       onset of infectiousness, and the delay to self-detection is some time
@@ -50,10 +51,10 @@ app.
       actively detect B, but not the index or C (although C might be detected if
       the detection of A leads to contact tracing that detects B that in turn
       leads to contact tracing that detects C).
-  - "Detection" here means detection _and_ successful intervention. We do not
-    separately model the detected infection's probability of divulging contact
-    information, the ability of public health to find that contact, or the
-    probability of that contact to comply with quarantine/isolation.
+    - N.B.: "Detection" here means detection _and_ successful intervention. We
+      do not separately model the detected infection's probability of divulging
+      contact information, the ability of public health to find that contact, or
+      the probability of that contact to comply with quarantine/isolation.
   - There is a distribution of times between triggering detection and contact
     tracing completion. Start with Dirac delta.
 - Input parameters/assumptions for this model
