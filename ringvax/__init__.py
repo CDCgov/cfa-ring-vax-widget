@@ -10,19 +10,24 @@ class Simulation:
         self.seed = seed
         self.rng = numpy.random.default_rng(self.seed)
 
-        index_infection = self.get_infection_history(t_exposed=0.0) | {"generation": 0}
+        index_infection = self.get_infection_history(t_exposed=0.0) | {
+            "generation": 0
+        }
         self.infections = [index_infection]
 
     def run(self):
         for g in range(self.params["n_generations"]):
             # get all the infectious people in this generation
-            this_generation = [x for x in self.infections if x["generation"] == g]
+            this_generation = [
+                x for x in self.infections if x["generation"] == g
+            ]
 
             # instantiate the next-gen infections caused by each infection in this generation
             for x in this_generation:
                 for t_exposed in x["t_infections"]:
                     self.infections.append(
-                        self.get_infection_history(t_exposed) | {"generation": g + 1}
+                        self.get_infection_history(t_exposed)
+                        | {"generation": g + 1}
                     )
 
     def get_infection_history(self, t_exposed: float) -> dict[str, Any]:
@@ -31,7 +36,9 @@ class Simulation:
         infection_rate = self.get_infection_rate()
 
         infection_delays = self.get_infection_delays(
-            self.rng, rate=infection_rate, infectious_duration=infectious_duration
+            self.rng,
+            rate=infection_rate,
+            infectious_duration=infectious_duration,
         )
 
         t_infectious = t_exposed + latent_duration
