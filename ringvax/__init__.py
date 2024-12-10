@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 import numpy.random
@@ -10,27 +11,65 @@ class Simulation:
         self.seed = seed
         self.rng = numpy.random.default_rng(self.seed)
 
-        index_infection = self.get_infection_history(t_exposed=0.0) | {
-            "generation": 0
-        }
-        self.infections = [index_infection]
+        index_infection = self.get_person()
+        self.infections = {index_infection["id"]: index_infection}
 
     def run(self):
+        self.generate_infections()
+        self.intervene()
+
+    def generate_infections(self) -> None:
+        """Run no-intervention counterfactual"""
         for g in range(self.params["n_generations"]):
-            # get all the infectious people in this generation
+            # get list of IDs the infectious people in this generation
             this_generation = [
-                x for x in self.infections if x["generation"] == g
+                id
+                for id, person in self.infections.items()
+                if person["generation"] == g
             ]
 
             # instantiate the next-gen infections caused by each infection in this generation
-            for x in this_generation:
-                for t_exposed in x["t_infections"]:
-                    self.infections.append(
-                        self.get_infection_history(t_exposed)
-                        | {"generation": g + 1}
+            for infector in this_generation:
+                for t_exposed in self.infections[infector]["t_infections"]:
+                    infectee = self.generate_person(
+                        infector=infector, t_exposed=t_exposed
                     )
+                    self.infections.append(infectee)
+
+    def intervene(self) -> None:
+        """Draw intervention outcomes and update chains of infection"""
+        # figure out who gets detected
+        for id in self.infections:
+            is_detected_passive = (
+                self.rng.uniform() < self.params["p_passive_detect"]
+            )
+
+            # do active detection
+            pass
+
+        # truncate chains of transmission based on who got detected
+        pass
+
+    def generate_person(
+        self, t_exposed: float, infector: str = None
+    ) -> dict[str, Any]:
+        """Generate a single infected person"""
+        id = str(uuid.uuid4())
+        history = self.get_infection_history(t_exposed=t_exposed)
+
+        if infector is None:
+            generation = 0
+        else:
+            generation = self.infections[infector]["generation"] + 1
+
+        return {
+            "id": id,
+            "infector": infector,
+            "generation": generation,
+        } | history
 
     def get_infection_history(self, t_exposed: float) -> dict[str, Any]:
+        """Generate infection history for a single infected person"""
         latent_duration = self.get_latent_duration()
         infectious_duration = self.get_infectious_duration()
         infection_rate = self.get_infection_rate()
