@@ -1,46 +1,32 @@
 repos:
-#####
-# Basic file cleanliness
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  #####
+  # Basic file cleanliness
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-    -   id: check-added-large-files
-    -   id: check-yaml
-    -   id: check-toml
-    -   id: end-of-file-fixer
-    -   id: mixed-line-ending
-    -   id: trailing-whitespace
-#####
-# Python
--   repo: https://github.com/psf/black
-    rev: 23.10.0
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+  #####
+  # Python
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
     hooks:
-        # if you have ipython notebooks, consider using
-        # `black-jupyter` hook instead
-    -   id: black
-        args: ['--line-length', '79']
--   repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-    -   id: isort
-        args: ['--profile', 'black',
-               '--line-length', '79']
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.0
-  hooks:
-    - id: ruff
-#####
-# R
--   repo: https://github.com/lorenzwalthert/precommit
-    rev: v0.4.2
-    hooks:
-    -   id: style-files
-    -   id: lintr
-#####
-# Secrets
--   repo: https://github.com/Yelp/detect-secrets
+      # Sort imports
+      - id: ruff
+        args: ["check", "--select", "I", "--fix"]
+      # Run the linter
+      - id: ruff
+      # Run the formatter
+      - id: ruff-format
+  #####
+  # Secrets
+  - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
-    -   id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
         exclude: package.lock.json
