@@ -24,9 +24,7 @@ class Simulation:
         """Get a property of a person"""
         return self.infections[id][property]
 
-    def query_people(
-        self, query: Optional[dict[str, Any]] = None
-    ) -> List[str]:
+    def query_people(self, query: Optional[dict[str, Any]] = None) -> List[str]:
         """Get IDs of people with a given set of properties"""
         if query is None:
             return list(self.infections.keys())
@@ -45,17 +43,13 @@ class Simulation:
     ) -> dict[str, Any]:
         """Generate properties of a single infected person"""
         # disease state history in this individual, and when they infect others
-        infection_history = self.generate_infection_history(
-            t_exposed=t_exposed
-        )
+        infection_history = self.generate_infection_history(t_exposed=t_exposed)
 
         # passive detection
         passive_detected = self.binomial(self.params["p_passive_detect"])
 
         if passive_detected:
-            t_passive_detected = (
-                t_exposed + self.generate_passive_detection_delay()
-            )
+            t_passive_detected = t_exposed + self.generate_passive_detection_delay()
         else:
             t_passive_detected = None
 
@@ -93,9 +87,7 @@ class Simulation:
 
             # instantiate the next-gen infections caused by each infection in this generation
             for infector in this_generation:
-                for t_exposed in self.get_person_property(
-                    infector, "t_infections"
-                ):
+                for t_exposed in self.get_person_property(infector, "t_infections"):
                     infectee = self.create_person()
                     self.update_person(
                         infectee,
@@ -112,8 +104,7 @@ class Simulation:
         # we should have no more than N generations in the data
         assert (
             max(
-                self.get_person_property(id, "generation")
-                for id in self.query_people()
+                self.get_person_property(id, "generation") for id in self.query_people()
             )
             <= self.params["n_generations"]
         )
@@ -152,9 +143,7 @@ class Simulation:
             infector, "detected"
         ) and self.get_person_property(
             infector, "t_detected"
-        ) < self.get_person_property(
-            infectee, "t_exposed"
-        ):
+        ) < self.get_person_property(infectee, "t_exposed"):
             # if the infection occurred after infectee's detection, also not
             # actually infected
             actually_infected = False
@@ -196,9 +185,7 @@ class Simulation:
                 infectee, "t_passive_detected"
             )
             t_detected = min(
-                x
-                for x in [t_passive_detected, t_active_detected]
-                if x is not None
+                x for x in [t_passive_detected, t_active_detected] if x is not None
             )
 
         else:
