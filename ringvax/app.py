@@ -1,6 +1,21 @@
+import graphviz
 import streamlit as st
 
 from ringvax import Simulation
+
+
+def make_graph(sim: Simulation):
+    graph = graphviz.Digraph()
+    for infectee in sim.query_people():
+        infector = sim.get_person_property(infectee, "infector")
+
+        if infector is None:
+            # this is the index infection
+            graph.node(str(infectee))
+        else:
+            graph.edge(str(infector), str(infectee))
+
+    return graph
 
 
 def app():
@@ -89,6 +104,10 @@ def app():
     s = Simulation(params=params, seed=seed)
     s.run()
 
+    st.header("Graph of infections")
+    st.graphviz_chart(make_graph(s))
+
+    st.header("Raw results")
     for id, content in s.infections.items():
         st.text(id)
         st.text(content)
