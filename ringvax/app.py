@@ -60,6 +60,7 @@ def app():
         "p_passive_detect": p_passive_detect,
         "passive_detection_delay": passive_detection_delay,
         "p_active_detect": p_active_detect,
+        "active_detection_delay": active_detection_delay,
     }
     s = Simulation(params=params, seed=seed)
     s.run()
