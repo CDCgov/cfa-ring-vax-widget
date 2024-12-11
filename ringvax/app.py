@@ -7,7 +7,12 @@ def app():
     st.title("Ring vaccination")
 
     latent_duration = st.slider(
-        "Latent duration", min_value=0.0, max_value=10.0, value=1.0, step=0.1
+        "Latent duration",
+        min_value=0.0,
+        max_value=10.0,
+        value=1.0,
+        step=0.1,
+        format="%.1f days",
     )
     infectious_duration = st.slider(
         "Infectious duration",
@@ -15,6 +20,7 @@ def app():
         max_value=10.0,
         value=3.0,
         step=0.1,
+        format="%.1f days",
     )
     infection_rate = st.slider(
         "Infection rate", min_value=0.0, max_value=10.0, value=1.0, step=0.1
@@ -36,7 +42,7 @@ def app():
         max_value=10.0,
         value=2.0,
         step=0.1,
-        format="%d days",
+        format="%.1f days",
     )
     p_active_detect = (
         st.slider(
@@ -50,12 +56,12 @@ def app():
         / 100.0
     )
     active_detection_delay = st.slider(
-        "Passive detection delay",
+        "Active detection delay",
         min_value=0.0,
         max_value=10.0,
-        value=???,
+        value=2.0,
         step=0.1,
-        format="%d days",
+        format="%.1f days",
     )
     n_generations = st.number_input("Number of generations", value=4, step=1)
     seed = st.number_input("Random seed", value=1234, step=1)
