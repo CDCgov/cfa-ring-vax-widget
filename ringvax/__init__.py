@@ -251,7 +251,7 @@ class Simulation:
         n_events = rng.poisson(infectious_duration)
         times = rng.uniform(0.0, infectious_duration, n_events)
         times.sort()
-        return times
+        return list(times)
 
     def bernoulli(self, p: float) -> bool:
         return self.rng.binomial(n=1, p=p) == 1

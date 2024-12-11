@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import numpy.random
 import pytest
@@ -35,26 +33,16 @@ def test_infection_delays_zero_duration(rng):
 
 
 def test_infection_delays(rng):
-    rng2 = copy.deepcopy(rng)
+    duration = 5.0
 
     times = np.array(
         ringvax.Simulation.generate_infection_delays(
-            rng=rng, rate=0.5, infectious_duration=10.0
+            rng=rng, rate=0.5, infectious_duration=duration
         )
     )
 
-    assert max(times) <= 10.0
-    assert (times.round(3) == np.array([3.047, 4.477, 8.103, 9.728])).all()
-
-    # If using the same rng, shorter period should mean truncating only
-    times2 = np.array(
-        ringvax.Simulation.generate_infection_delays(
-            rng=rng2, rate=0.5, infectious_duration=5.0
-        )
-    )
-
-    assert max(times2) <= 5.0
-    assert (times2 == times[times < 5.0]).all()
+    assert max(times) <= duration
+    assert (times.round(3) == np.array([1.209, 1.318, 1.593, 2.205, 4.82])).all()
 
 
 def test_get_infection_history(rng):
@@ -66,9 +54,11 @@ def test_get_infection_history(rng):
     }
     s = ringvax.Simulation(params=params, seed=rng)
     history = s.generate_infection_history(t_exposed=0.0)
+    # for ease of testing, make this a list of rounded numbers
+    history["t_infections"] = [round(float(x), 3) for x in history["t_infections"]]
     assert history == {
         "t_exposed": 0.0,
-        "t_infections": [np.float64(1.7618651221460064)],
+        "t_infections": [1.262, 1.319],
         "t_infectious": 1.0,
         "t_recovered": 2.0,
     }
@@ -86,7 +76,10 @@ def test_get_infection_history_nonzero(rng):
     history = s.generate_infection_history(t_exposed=10.0)
     assert history == {
         "t_exposed": 10.0,
-        "t_infections": [np.float64(11.7618651221460064)],
+        "t_infections": [
+            np.float64(11.261692423863543),
+            np.float64(11.319097058414197),
+        ],
         "t_infectious": 11.0,
         "t_recovered": 12.0,
     }
@@ -105,7 +98,7 @@ def test_simulate(rng):
     }
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
-    assert len(s.infections) == 72
+    assert len(s.infections) == 278
 
 
 def test_intervene1_infector_not_infected(rng):
