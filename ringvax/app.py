@@ -49,6 +49,14 @@ def app():
         )
         / 100.0
     )
+    active_detection_delay = st.slider(
+        "Passive detection delay",
+        min_value=0.0,
+        max_value=10.0,
+        value=???,
+        step=0.1,
+        format="%d days",
+    )
     n_generations = st.number_input("Number of generations", value=4, step=1)
     seed = st.number_input("Random seed", value=1234, step=1)
 
