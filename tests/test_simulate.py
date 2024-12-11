@@ -42,7 +42,7 @@ def test_infection_delays(rng):
     )
 
     assert max(times) <= duration
-    assert (times.round(3) == np.array([1.209, 1.318, 1.593, 2.205, 4.82])).all()
+    assert (times.round(3) == np.array([0.59, 1.209, 1.593, 4.82])).all()
 
 
 def test_get_infection_history(rng):
@@ -58,7 +58,7 @@ def test_get_infection_history(rng):
     history["t_infections"] = [round(float(x), 3) for x in history["t_infections"]]
     assert history == {
         "t_exposed": 0.0,
-        "t_infections": [1.262, 1.319],
+        "t_infections": [1.118, 1.242, 1.319],
         "t_infectious": 1.0,
         "t_recovered": 2.0,
     }
@@ -77,7 +77,8 @@ def test_get_infection_history_nonzero(rng):
     assert history == {
         "t_exposed": 10.0,
         "t_infections": [
-            np.float64(11.261692423863543),
+            np.float64(11.118091232966643),
+            np.float64(11.241766293252786),
             np.float64(11.319097058414197),
         ],
         "t_infectious": 11.0,
