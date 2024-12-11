@@ -131,63 +131,60 @@ class Simulation:
         """Process intervention for a single infectee"""
         infector = self.get_person_property(infectee, "infector")
 
-        # did this person actually get infected?
-        if infector is None:
-            # the index case is always infected
+        is_index = infector is None
+        if is_index:
             assert self.get_person_property(infectee, "generation") == 0
-            actually_infected = True
-        elif not self.get_person_property(infector, "actually_infected"):
-            # if the infector was not actually infected, this one also not
-            actually_infected = False
-        elif self.get_person_property(
-            infector, "detected"
-        ) and self.get_person_property(
-            infector, "t_detected"
-        ) < self.get_person_property(infectee, "t_exposed"):
-            # if the infection occurred after infectee's detection, also not
-            # actually infected
-            actually_infected = False
-        else:
-            # otherwise, they are
-            actually_infected = True
 
-        # if they were actually infected, see if their infector was detected,
-        # so that they have a chance for active detection
-        # (infector is not None is to ignore the index infection)
+        # you are actually infected if:
+        # you are the index infection OR (
+        #   your infector was actually infected AND
+        #   NOT they were detected early enough to stop your getting infected
+        # )
+        actually_infected = is_index or (
+            self.get_person_property(infector, "actually_infected")
+            and not (
+                self.get_person_property(infector, "detected")
+                and (
+                    self.get_person_property(infector, "t_detected")
+                    < self.get_person_property(infectee, "t_exposed")
+                )
+            )
+        )
+
+        # if you were actually infected, see if you infector was detected,
+        # so that you have a chance for active detection
         if (
             actually_infected
-            and infector is not None
+            and not is_index
             and self.get_person_property(infector, "detected")
         ):
             active_detected = self.bernoulli(self.params["p_active_detect"])
-
-            if active_detected:
-                t_active_detected = (
-                    self.get_person_property(infector, "t_detected")
-                    + self.generate_active_detection_delay()
-                )
-            else:
-                t_active_detected = None
         else:
-            # otherwise, leave these values undefined
-            active_detected = None
+            active_detected = False
+
+        # if you were actively detected, when?
+        if active_detected:
+            t_active_detected = (
+                self.get_person_property(infector, "t_detected")
+                + self.generate_active_detection_delay()
+            )
+        else:
             t_active_detected = None
 
-        # now reconcile everything that's happened to this person
-        # where they detected by either means?
-        detected = (
-            self.get_person_property(infectee, "passive_detected")
-            or active_detected is True
-        )
-        # if so, when?
-        if detected:
-            t_passive_detected = self.get_person_property(
-                infectee, "t_passive_detected"
-            )
-            t_detected = min(
-                x for x in [t_passive_detected, t_active_detected] if x is not None
-            )
+        # now reconcile everything that's happened to you
+        passive_detected = self.get_person_property(infectee, "passive_detected")
+        t_passive_detected = self.get_person_property(infectee, "t_passive_detected")
 
+        if active_detected and passive_detected:
+            assert t_passive_detected is not None
+            assert t_active_detected is not None
+            t_detected = min(t_passive_detected, t_active_detected)
+        elif active_detected and not passive_detected:
+            assert t_active_detected is not None
+            t_detected = t_active_detected
+        elif not active_detected and passive_detected:
+            assert t_passive_detected is not None
+            t_detected = t_passive_detected
         else:
             t_detected = None
 
@@ -197,7 +194,7 @@ class Simulation:
                 "actually_infected": actually_infected,
                 "active_detected": active_detected,
                 "t_active_detected": t_active_detected,
-                "detected": detected,
+                "detected": passive_detected or active_detected,
                 "t_detected": t_detected,
             },
         )

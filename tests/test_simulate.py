@@ -74,6 +74,24 @@ def test_get_infection_history(rng):
     }
 
 
+def test_get_infection_history_nonzero(rng):
+    """Infection history should shift if exposure time changes"""
+    params = {
+        "n_generations": 4,
+        "latent_duration": 1.0,
+        "infectious_duration": 1.0,
+        "infection_rate": 2.0,
+    }
+    s = ringvax.Simulation(params=params, seed=rng)
+    history = s.generate_infection_history(t_exposed=10.0)
+    assert history == {
+        "t_exposed": 10.0,
+        "t_infections": [np.float64(11.7618651221460064)],
+        "t_infectious": 11.0,
+        "t_recovered": 12.0,
+    }
+
+
 def test_simulate(rng):
     params = {
         "n_generations": 4,
@@ -88,3 +106,22 @@ def test_simulate(rng):
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
     assert len(s.infections) == 72
+
+
+def test_intervene1_infector_not_infected(rng):
+    """If infector is not actually infected, infectee is not actually infected"""
+    s = ringvax.Simulation(params={}, seed=rng)
+    infector = s.create_person()
+    infectee = s.create_person()
+    s.update_person(infector, {"actually_infected": False})
+    s.update_person(
+        infectee,
+        {
+            "infector": infector,
+            "generation": 1,
+            "passive_detected": None,
+            "t_passive_detected": None,
+        },
+    )
+    s._intervene1(infectee)
+    assert s.get_person_property(infectee, "actually_infected") is False
