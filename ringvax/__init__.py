@@ -150,7 +150,7 @@ class Simulation:
             if active_detected:
                 t_active_detected = (
                     self.get_person_property(infector, "t_detected")
-                    + self.generate_passive_detection_delay()
+                    + self.generate_active_detection_delay()
                 )
             else:
                 t_active_detected = None
@@ -224,6 +224,9 @@ class Simulation:
 
     def generate_passive_detection_delay(self) -> float:
         return self.params["passive_detection_delay"]
+
+    def generate_active_detection_delay(self) -> float:
+        return self.params["active_detection_delay"]
 
     @staticmethod
     def generate_infection_delays(

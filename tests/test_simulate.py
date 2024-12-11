@@ -83,6 +83,7 @@ def test_simulate(rng):
         "p_passive_detect": 0.5,
         "passive_detection_delay": 2.0,
         "p_active_detect": 0.15,
+        "active_detection_delay": 2.0,
     }
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
