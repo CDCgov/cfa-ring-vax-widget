@@ -243,7 +243,7 @@ class Simulation:
     @staticmethod
     def generate_infection_delays(
         rng: numpy.random.Generator, rate: float, infectious_duration: float
-    ) -> [float]:
+    ) -> List[float]:
         """Times from onset of infectiousness to each infection"""
         assert rate >= 0.0
         assert infectious_duration >= 0.0
