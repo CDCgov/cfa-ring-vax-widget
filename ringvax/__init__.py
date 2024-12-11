@@ -248,14 +248,9 @@ class Simulation:
         if rate == 0.0:
             return []
 
-        times = []
-        # start at t=0, draw the first delay, then add it to the list only if
-        # it's inside the infectious duration. then iterate.
-        t = rng.exponential(scale=1.0 / rate)
-        while t < infectious_duration:
-            times.append(t)
-            t += rng.exponential(scale=1.0 / rate)
-
+        n_events = rng.poisson(infectious_duration)
+        times = rng.uniform(0.0, infectious_duration, n_events)
+        times.sort()
         return times
 
     def bernoulli(self, p: float) -> bool:
