@@ -9,10 +9,15 @@ def make_graph(sim: Simulation):
     for infectee in sim.query_people():
         infector = sim.get_person_property(infectee, "infector")
 
-        if infector is None:
-            # this is the index infection
-            graph.node(str(infectee))
-        else:
+        color = (
+            "black"
+            if sim.get_person_property(infectee, "actually_infected")
+            else "gray"
+        )
+
+        graph.node(str(infectee), color=color)
+
+        if infector is not None:
             graph.edge(str(infector), str(infectee))
 
     return graph
