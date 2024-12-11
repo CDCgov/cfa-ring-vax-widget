@@ -46,7 +46,7 @@ class Simulation:
         infection_history = self.generate_infection_history(t_exposed=t_exposed)
 
         # passive detection
-        passive_detected = self.binomial(self.params["p_passive_detect"])
+        passive_detected = self.bernoulli(self.params["p_passive_detect"])
 
         if passive_detected:
             t_passive_detected = t_exposed + self.generate_passive_detection_delay()
@@ -159,7 +159,7 @@ class Simulation:
             and infector is not None
             and self.get_person_property(infector, "detected")
         ):
-            active_detected = self.binomial(self.params["p_active_detect"])
+            active_detected = self.bernoulli(self.params["p_active_detect"])
 
             if active_detected:
                 t_active_detected = (
@@ -261,5 +261,5 @@ class Simulation:
 
         return times
 
-    def binomial(self, p: float) -> bool:
+    def bernoulli(self, p: float) -> bool:
         return self.rng.binomial(n=1, p=p) == 1
