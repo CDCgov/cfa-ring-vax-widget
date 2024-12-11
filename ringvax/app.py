@@ -64,6 +64,9 @@ def app():
         format="%.1f days",
     )
     n_generations = st.number_input("Number of generations", value=4, step=1)
+    max_infections = st.number_input(
+        "Maximum number of infections", value=100, step=10, min_value=10
+    )
     seed = st.number_input("Random seed", value=1234, step=1)
 
     params = {
@@ -75,10 +78,14 @@ def app():
         "passive_detection_delay": passive_detection_delay,
         "p_active_detect": p_active_detect,
         "active_detection_delay": active_detection_delay,
+        "max_infections": max_infections,
     }
     s = Simulation(params=params, seed=seed)
     s.run()
-    st.text(s.infections)
+
+    for id, content in s.infections.items():
+        st.text(id)
+        st.text(content)
 
 
 if __name__ == "__main__":
