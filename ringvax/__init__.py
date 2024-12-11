@@ -1,4 +1,3 @@
-import uuid
 from typing import Any
 
 import numpy.random
@@ -17,7 +16,7 @@ class Simulation:
 
     def create_person(self) -> str:
         """Add a new person to the data"""
-        id = str(uuid.uuid4())
+        id = len(self.infections)
         self.infections[id] = {}
         return id
 

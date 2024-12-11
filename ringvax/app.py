@@ -62,10 +62,8 @@ def app():
         "p_active_detect": p_active_detect,
     }
     s = Simulation(params=params, seed=seed)
-
-    if st.button("Run simulation"):
-        s.run()
-        st.text(s.infections)
+    s.run()
+    st.text(s.infections)
 
 
 if __name__ == "__main__":
