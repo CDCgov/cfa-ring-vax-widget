@@ -76,6 +76,12 @@ def app():
         "p_active_detect": p_active_detect,
         "active_detection_delay": active_detection_delay,
     }
+
+    st.subheader(
+        f"R0 is {infectious_duration * infection_rate:.2f}",
+        help="R0 is the average duration of infection multiplied by the infectious rate.",
+    )
+
     s = Simulation(params=params, seed=seed)
     s.run()
     st.text(s.infections)
