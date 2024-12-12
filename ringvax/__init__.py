@@ -248,7 +248,7 @@ class Simulation:
         if rate == 0.0:
             return []
 
-        n_events = rng.poisson(infectious_duration)
+        n_events = rng.poisson(infectious_duration * rate)
         times = rng.uniform(0.0, infectious_duration, n_events)
         times.sort()
         return list(times)
