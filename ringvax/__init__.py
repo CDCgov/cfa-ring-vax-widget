@@ -45,8 +45,12 @@ class Simulation:
             len(infection_queue) > 0
             and len(self.query_people()) < self.params["max_infections"]
         ):
-            # pop a person off the end of the queue
-            t_exposed, infector = infection_queue.pop()
+            # find the person who is infected next. this ensures that, if we stop the
+            # simulation after some number of infections, the first infections were done
+            # first
+            infection_queue.sort(key=lambda t: t[0])
+            t_exposed, infector = infection_queue.pop(0)
+
             id = self.create_person()
             self.generate_infection(id=id, t_exposed=t_exposed, infector=infector)
 
@@ -56,10 +60,11 @@ class Simulation:
                 self.get_person_property(id, "generation")
                 < self.params["n_generations"]
             ):
-                for t in self.get_person_property(id, "t_infections"):
-                    # enqueue the next infections, which will be processed unless we hit
-                    # the max. # of infections
-                    infection_queue.insert(0, (t, id))
+                # enqueue the next infections, which will be processed unless we hit
+                # the max. # of infections
+                infection_queue += [
+                    (t, id) for t in self.get_person_property(id, "t_infections")
+                ]
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
