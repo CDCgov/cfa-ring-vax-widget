@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+import numpy as np
 import numpy.random
 
 
@@ -12,7 +13,6 @@ class Simulation:
 
     def run(self):
         self.run_infections()
-        self.intervene()
 
     def create_person(self) -> str:
         """Add a new person to the data"""
@@ -44,12 +44,15 @@ class Simulation:
         """Generate properties of a single infected person"""
         # disease state history in this individual, and when they infect others
         infection_history = self.generate_infection_history(t_exposed=t_exposed)
-
         # passive detection
         passive_detected = self.bernoulli(self.params["p_passive_detect"])
 
         if passive_detected:
             t_passive_detected = t_exposed + self.generate_passive_detection_delay()
+            # Remove infections that never happened do to passive detection
+            infection_history["t_infections"] = infection_history["t_infections"][
+                infection_history["t_infections"] < t_passive_detected
+            ]
         else:
             t_passive_detected = None
 
@@ -66,9 +69,8 @@ class Simulation:
             "t_passive_detected": t_passive_detected,
             "active_detected": None,
             "t_active_detected": None,
-            "detected": None,
-            "t_detected": None,
-            "actually_infected": None,
+            "detected": True if passive_detected else None,
+            "t_detected": t_passive_detected if passive_detected else None,
         } | infection_history
 
     def run_infections(self) -> None:
@@ -95,6 +97,7 @@ class Simulation:
                             infector=infector, t_exposed=t_exposed
                         ),
                     )
+                    self.propagate_intervention(infectee)
                     # keep track of the people infected in the next generation
                     next_generation.append(infectee)
 
@@ -119,85 +122,40 @@ class Simulation:
             n_infectees = len(self.query_people({"generation": g + 1}))
             assert n_infections == n_infectees
 
-    def intervene(self) -> None:
-        """Draw intervention outcomes and update chains of infection"""
-        for generation in range(self.params["n_generations"]):
-            # get infections in this generation
-            for infectee in self.query_people({"generation": generation}):
-                # process each infectee
-                self._intervene1(infectee)
+    def propagate_intervention(self, person: str):
+        infector = self.get_person_property(person, "infector")
 
-    def _intervene1(self, infectee: str) -> None:
-        """Process intervention for a single infectee"""
-        infector = self.get_person_property(infectee, "infector")
-
-        is_index = infector is None
-        if is_index:
-            assert self.get_person_property(infectee, "generation") == 0
-
-        # you are actually infected if:
-        # you are the index infection OR (
-        #   your infector was actually infected AND
-        #   NOT they were detected early enough to stop your getting infected
-        # )
-        actually_infected = is_index or (
-            self.get_person_property(infector, "actually_infected")
-            and not (
-                self.get_person_property(infector, "detected")
-                and (
-                    self.get_person_property(infector, "t_detected")
-                    < self.get_person_property(infectee, "t_exposed")
-                )
-            )
-        )
-
-        # if you were actually infected, see if you infector was detected,
-        # so that you have a chance for active detection
-        if (
-            actually_infected
-            and not is_index
-            and self.get_person_property(infector, "detected")
+        # Run active detection on this individual, if eligible
+        if self.get_person_property(infector, "detected") and self.bernoulli(
+            self.params["p_active_detect"]
         ):
-            active_detected = self.bernoulli(self.params["p_active_detect"])
-        else:
-            active_detected = False
-
-        # if you were actively detected, when?
-        if active_detected:
-            t_active_detected = (
+            t_active_detection = (
                 self.get_person_property(infector, "t_detected")
                 + self.generate_active_detection_delay()
             )
-        else:
-            t_active_detected = None
+            t_detected = t_active_detection
 
-        # now reconcile everything that's happened to you
-        passive_detected = self.get_person_property(infectee, "passive_detected")
-        t_passive_detected = self.get_person_property(infectee, "t_passive_detected")
+            # Adjust true detection time, if needed
+            if self.get_person_property(person, "passive_detected"):
+                t_detected = min(
+                    t_active_detection,
+                    self.get_person_property(person, "t_passive_detected"),
+                )
 
-        if active_detected and passive_detected:
-            assert t_passive_detected is not None
-            assert t_active_detected is not None
-            t_detected = min(t_passive_detected, t_active_detected)
-        elif active_detected and not passive_detected:
-            assert t_active_detected is not None
-            t_detected = t_active_detected
-        elif not active_detected and passive_detected:
-            assert t_passive_detected is not None
-            t_detected = t_passive_detected
-        else:
-            t_detected = None
+            # Remove any infections they can't cause due to active detection
+            t_infections = self.get_person_property(person, "t_infections")
+            t_infections = t_infections[t_infections < t_detected]
 
-        self.update_person(
-            infectee,
-            {
-                "actually_infected": actually_infected,
-                "active_detected": active_detected,
-                "t_active_detected": t_active_detected,
-                "detected": passive_detected or active_detected,
-                "t_detected": t_detected,
-            },
-        )
+            self.update_person(
+                person,
+                {
+                    "t_infections": t_infections,
+                    "active_detected": True,
+                    "t_active_detected": t_active_detection,
+                    "detected": True,
+                    "t_detected": t_detected,
+                },
+            )
 
     def generate_infection_history(self, t_exposed: float) -> dict[str, Any]:
         """Generate infection history for a single infected person"""
@@ -213,7 +171,7 @@ class Simulation:
 
         t_infectious = t_exposed + latent_duration
         t_recovered = t_infectious + infectious_duration
-        t_infections = [t_infectious + d for d in infection_delays]
+        t_infections = t_infectious + infection_delays
 
         return {
             "t_exposed": t_exposed,
@@ -240,18 +198,18 @@ class Simulation:
     @staticmethod
     def generate_infection_delays(
         rng: numpy.random.Generator, rate: float, infectious_duration: float
-    ) -> List[float]:
+    ) -> np.ndarray:
         """Times from onset of infectiousness to each infection"""
         assert rate >= 0.0
         assert infectious_duration >= 0.0
 
         if rate == 0.0:
-            return []
+            return np.array(())
 
         n_events = rng.poisson(infectious_duration * rate)
         times = rng.uniform(0.0, infectious_duration, n_events)
         times.sort()
-        return list(times)
+        return times
 
     def bernoulli(self, p: float) -> bool:
         return self.rng.binomial(n=1, p=p) == 1
