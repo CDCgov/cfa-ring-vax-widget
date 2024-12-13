@@ -11,10 +11,11 @@ def rng():
 
 
 def test_infection_delays_zero_rate(rng):
+    """If zero rate, zero infections"""
     assert (
         list(
-            ringvax.Simulation.generate_infection_delays(
-                rng, rate=0.0, infectious_duration=1.0
+            ringvax.Simulation.generate_infection_times(
+                rng, rate=0.0, infectious_duration=100.0
             )
         )
         == []
@@ -22,10 +23,11 @@ def test_infection_delays_zero_rate(rng):
 
 
 def test_infection_delays_zero_duration(rng):
+    """If zero duration, zero infections"""
     assert (
         list(
-            ringvax.Simulation.generate_infection_delays(
-                rng, rate=1.0, infectious_duration=0.0
+            ringvax.Simulation.generate_infection_times(
+                rng, rate=100.0, infectious_duration=0.0
             )
         )
         == []
@@ -36,7 +38,7 @@ def test_infection_delays(rng):
     duration = 5.0
 
     times = np.array(
-        ringvax.Simulation.generate_infection_delays(
+        ringvax.Simulation.generate_infection_times(
             rng=rng, rate=0.5, infectious_duration=duration
         )
     )
@@ -45,7 +47,7 @@ def test_infection_delays(rng):
     assert (times.round(3) == np.array([0.59, 1.209, 1.593, 4.82])).all()
 
 
-def test_get_infection_history(rng):
+def test_generate_disease_history(rng):
     params = {
         "n_generations": 4,
         "latent_duration": 1.0,
@@ -53,22 +55,18 @@ def test_get_infection_history(rng):
         "infection_rate": 2.0,
     }
     s = ringvax.Simulation(params=params, seed=rng)
-    history = s.generate_infection_history(t_exposed=0.0)
+    history = s.generate_disease_history(t_exposed=0.0)
     # for ease of testing, make this a list of rounded numbers
 
     assert history == {
         "t_exposed": 0.0,
         "t_infectious": 1.0,
-        "t_infections_if_undetected": [
-            np.float64(1.1180912329666428),
-            np.float64(1.241766293252785),
-            np.float64(1.3190970584141977),
-        ],
         "t_recovered": 2.0,
+        "infection_rate": 2.0,
     }
 
 
-def test_get_infection_history_nonzero(rng):
+def test_generate_disease_history_nonzero(rng):
     """Infection history should shift if exposure time changes"""
     params = {
         "n_generations": 4,
@@ -77,16 +75,12 @@ def test_get_infection_history_nonzero(rng):
         "infection_rate": 2.0,
     }
     s = ringvax.Simulation(params=params, seed=rng)
-    history = s.generate_infection_history(t_exposed=10.0)
+    history = s.generate_disease_history(t_exposed=10.0)
     assert history == {
         "t_exposed": 10.0,
-        "t_infections_if_undetected": [
-            np.float64(11.118091232966643),
-            np.float64(11.241766293252786),
-            np.float64(11.319097058414197),
-        ],
         "t_infectious": 11.0,
         "t_recovered": 12.0,
+        "infection_rate": 2.0,
     }
 
 

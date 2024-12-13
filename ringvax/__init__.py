@@ -79,7 +79,7 @@ class Simulation:
             generation = 0
         else:
             generation = self.get_person_property(infector, "generation") + 1
-        self.update_person(id, {"generation": generation})
+        self.update_person(id, {"infector": infector, "generation": generation})
 
         # disease state history in this individual
         disease_history = self.generate_disease_history(t_exposed=t_exposed)
