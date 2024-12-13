@@ -38,7 +38,7 @@ class Simulation:
         """Run simulation"""
         # queue is pairs (t_exposed, infector)
         # start with the index infection
-        infection_queue = [(0.0, None)]
+        infection_queue: List[tuple[float, Optional[str]]] = [(0.0, None)]
 
         while (
             len(infection_queue) > 0
