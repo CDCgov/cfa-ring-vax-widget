@@ -461,13 +461,13 @@ files = [
 
 [[package]]
 name = "narwhals"
-version = "1.17.0"
+version = "1.18.3"
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "narwhals-1.17.0-py3-none-any.whl", hash = "sha256:03772e08a6e70d6a5029b2299fa4d4acc51411cca5119afffd6bbc4c762038f4"},
-    {file = "narwhals-1.17.0.tar.gz", hash = "sha256:a2607fa66f0b6ccf6f54df57ee6bc4967b68095d2968c828894a5f77ed9d3c50"},
+    {file = "narwhals-1.18.3-py3-none-any.whl", hash = "sha256:e2c6861bde081308934fb9bdae9613a32c7bd731f835353d84d2fb027e645487"},
+    {file = "narwhals-1.18.3.tar.gz", hash = "sha256:30de15a97b7aeb8f9115e0bf1bba2ece99caaa8f8e570573a11c919e7dab29e9"},
 ]
 
 [package.extras]
