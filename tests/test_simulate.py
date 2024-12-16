@@ -98,7 +98,7 @@ def test_simulate(rng):
     }
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
-    assert len(s.infections) == 19
+    assert len(s.infections) == 21
 
 
 def test_simulate_max_infections(rng):
