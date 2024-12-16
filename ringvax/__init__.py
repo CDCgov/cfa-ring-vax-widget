@@ -1,13 +1,13 @@
 from typing import Any, List, Optional
 
-import numpy.random
+import numpy as np
 
 
 class Simulation:
     def __init__(self, params: dict[str, Any], seed: Optional[int] = None):
         self.params = params
         self.seed = seed
-        self.rng = numpy.random.default_rng(self.seed)
+        self.rng = np.random.default_rng(self.seed)
         self.infections = {}
 
     def run(self):
@@ -239,7 +239,7 @@ class Simulation:
 
     @staticmethod
     def generate_infection_delays(
-        rng: numpy.random.Generator, rate: float, infectious_duration: float
+        rng: np.random.Generator, rate: float, infectious_duration: float
     ) -> List[float]:
         """Times from onset of infectiousness to each infection"""
         assert rate >= 0.0
