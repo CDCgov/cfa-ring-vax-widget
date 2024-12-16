@@ -23,6 +23,11 @@ class Simulation:
 
     def get_person_property(self, id: str, property: str) -> Any:
         """Get a property of a person"""
+        if id not in self.infections:
+            raise RuntimeError(f"No person with {id=}")
+        elif property not in self.infections[id]:
+            raise RuntimeError(f"Person {id=} does not have property '{property}'")
+
         return self.infections[id][property]
 
     def query_people(self, query: Optional[dict[str, Any]] = None) -> List[str]:
@@ -84,6 +89,7 @@ class Simulation:
             generation = 0
         else:
             generation = self.get_person_property(infector, "generation") + 1
+
         self.update_person(id, {"infector": infector, "generation": generation})
 
         # disease state history in this individual
