@@ -1,3 +1,4 @@
+import bisect
 from typing import Any, List, Optional
 
 import numpy as np
@@ -48,7 +49,6 @@ class Simulation:
             # find the person who is infected next. this ensures that, if we stop the
             # simulation after some number of infections, the first infections were done
             # first
-            infection_queue.sort(key=lambda t: t[0])
             t_exposed, infector = infection_queue.pop(0)
 
             id = self.create_person()
@@ -62,9 +62,15 @@ class Simulation:
             ):
                 # enqueue the next infections, which will be processed unless we hit
                 # the max. # of infections
-                infection_queue += [
-                    (t, id) for t in self.get_person_property(id, "t_infections")
-                ]
+                for t in self.get_person_property(id, "infection_times"):
+                    bisect.insort_right(
+                        infection_queue,
+                        (
+                            t,
+                            id,
+                        ),
+                        key=lambda x: x[0],
+                    )
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
@@ -73,7 +79,6 @@ class Simulation:
         Generate a single infected person's biological disease history, detection
         history and transmission history
         """
-
         # keep track of generations
         if infector is None:
             generation = 0
@@ -89,23 +94,20 @@ class Simulation:
         detection_history = self.generate_detection_history(id)
         self.update_person(id, detection_history)
 
+        t_end_infection = disease_history["t_recovered"]
         if detection_history["detected"]:
-            t_end_infectious = detection_history["detection_time"]
-        else:
-            t_end_infectious = disease_history["t_recovered"]
+            t_end_infection = detection_history["t_detected"]
 
         # when do they infect people?
         infection_rate = self.generate_infection_rate()
 
-        if disease_history["t_onset_infection"] > t_end_infectious:
-            infection_times = []
+        if disease_history["t_infectious"] > t_end_infection:
+            infection_times = np.array([])
         else:
             infection_times = self.generate_infection_times(
                 self.rng,
                 rate=infection_rate,
-                infectious_duration=(
-                    disease_history["t_onset_infection"] - t_end_infectious
-                ),
+                infectious_duration=(t_end_infection - disease_history["t_infectious"]),
             )
 
         self.update_person(id, {"infection_times": infection_times})
@@ -128,58 +130,42 @@ class Simulation:
 
     def generate_detection_history(self, id: str) -> dict[str, Any]:
         """Determine if a person is infected, and when"""
-        passive_detected = self.bernoulli(self.params["p_passive_detect"])
         infector = self.get_person_property(id, "infector")
-        active_detected = self.get_person_property(
-            infector, "detected"
-        ) and self.bernoulli(self.params["p_active_detect"])
 
-        # these are counterfactual quantities; they only make sense if the person was
-        # actually detected
-        t_passive_detected = (
-            self.get_person_property(id, "t_exposure")
-            + self.generate_passive_detection_delay()
+        detected = False
+        detect_method = None
+        t_detected = None
+
+        passive_detected = self.bernoulli(self.params["p_passive_detect"])
+        if passive_detected:
+            detected = True
+            detect_method = "passive"
+            t_detected = (
+                self.get_person_property(id, "t_exposed")
+                + self.generate_passive_detection_delay()
+            )
+
+        active_detected = (
+            infector is not None
+            and self.get_person_property(infector, "detected")
+            and self.bernoulli(self.params["p_active_detect"])
         )
-        t_active_detected = (
-            self.get_person_property(infector, "t_detected")
-            + self.generate_active_detection_delay()
-        )
+
+        if active_detected:
+            t_active_detected = (
+                self.get_person_property(infector, "t_detected")
+                + self.generate_active_detection_delay()
+            )
+            if not detected or t_active_detected < t_detected:
+                detected = True
+                detect_method = "active"
+                t_detected = (
+                    self.get_person_property(id, "t_exposed")
+                    + self.generate_passive_detection_delay()
+                )
 
         t_recovered = self.get_person_property(id, "t_recovered")
-
-        if (
-            passive_detected
-            and active_detected
-            and t_passive_detected < t_recovered
-            and t_passive_detected <= t_active_detected
-        ):
-            detected = True
-            detect_method = "passive"
-            t_detected = t_passive_detected
-        elif (
-            passive_detected
-            and active_detected
-            and t_active_detected < t_recovered
-            and t_active_detected < t_passive_detected
-        ):
-            detected = True
-            detect_method = "active"
-            t_detected = t_active_detected
-        elif (
-            passive_detected
-            and not active_detected
-            and t_passive_detected < t_recovered
-        ):
-            detected = True
-            detect_method = "passive"
-            t_detected = t_passive_detected
-        elif (
-            active_detected and not passive_detected and t_active_detected < t_recovered
-        ):
-            detected = True
-            detect_method = "active"
-            t_detected = t_active_detected
-        else:
+        if detected and t_detected >= t_recovered:
             detected = False
             detect_method = None
             t_detected = None
@@ -217,9 +203,9 @@ class Simulation:
             return np.array(())
 
         n_events = rng.poisson(infectious_duration * rate)
-        times = rng.uniform(0.0, infectious_duration, n_events)
-        times.sort()
-        return times
+
+        # We sort these elsewhere, no need to do extra work
+        return rng.uniform(0.0, infectious_duration, n_events)
 
     def bernoulli(self, p: float) -> bool:
         return self.rng.binomial(n=1, p=p) == 1
