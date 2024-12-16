@@ -68,14 +68,7 @@ class Simulation:
                 # enqueue the next infections, which will be processed unless we hit
                 # the max. # of infections
                 for t in self.get_person_property(id, "infection_times"):
-                    bisect.insort_right(
-                        infection_queue,
-                        (
-                            t,
-                            id,
-                        ),
-                        key=lambda x: x[0],
-                    )
+                    bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
@@ -100,20 +93,23 @@ class Simulation:
         detection_history = self.generate_detection_history(id)
         self.update_person(id, detection_history)
 
-        t_end_infection = disease_history["t_recovered"]
         if detection_history["detected"]:
-            t_end_infection = detection_history["t_detected"]
+            t_end_infectious = detection_history["t_detected"]
+        else:
+            t_end_infectious = disease_history["t_recovered"]
 
         # when do they infect people?
         infection_rate = self.generate_infection_rate()
 
-        if disease_history["t_infectious"] > t_end_infection:
+        if disease_history["t_infectious"] > t_end_infectious:
             infection_times = np.array([])
         else:
             infection_times = self.generate_infection_times(
                 self.rng,
                 rate=infection_rate,
-                infectious_duration=(t_end_infection - disease_history["t_infectious"]),
+                infectious_duration=(
+                    t_end_infectious - disease_history["t_infectious"]
+                ),
             )
 
         self.update_person(id, {"infection_times": infection_times})

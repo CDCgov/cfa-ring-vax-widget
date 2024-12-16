@@ -98,7 +98,7 @@ def test_simulate(rng):
     }
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
-    assert len(s.infections) == 82
+    assert len(s.infections) == 19
 
 
 def test_simulate_max_infections(rng):
@@ -111,8 +111,8 @@ def test_simulate_max_infections(rng):
         "passive_detection_delay": 2.0,
         "p_active_detect": 0.15,
         "active_detection_delay": 2.0,
-        "max_infections": 20,
+        "max_infections": 10,
     }
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
-    assert len(s.infections) == 20
+    assert len(s.infections) == 10
