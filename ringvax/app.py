@@ -24,6 +24,7 @@ def make_graph(sim: Simulation):
 
 
 def format_duration(x: float, digits=3) -> str:
+    """Format a number of seconds duration into a string"""
     assert x >= 0
     min_time = 10 ** (-digits)
     if x < min_time:
