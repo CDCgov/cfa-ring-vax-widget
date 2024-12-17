@@ -37,6 +37,8 @@
 # Allowlist
 # !your_data_file.csv
 # !your_data_directory/
+!docs/*
+!docs/approach.md
 
 
 #####
@@ -254,7 +256,7 @@ vignettes/*.pdf
 .Renviron
 
 # pkgdown site
-docs/
+# docs/
 
 # translation temp files
 po/*~
