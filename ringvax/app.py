@@ -1,3 +1,5 @@
+import time
+
 import altair as alt
 import graphviz
 import streamlit as st
@@ -27,6 +29,15 @@ def make_graph(sim: Simulation):
             graph.edge(str(infector), str(infectee))
 
     return graph
+
+
+def format_duration(x: float, digits=3) -> str:
+    assert x >= 0
+    min_time = 10 ** (-digits)
+    if x < min_time:
+        return f"<{min_time} seconds"
+    else:
+        return f"{round(x, digits)} seconds"
 
 
 def app():
@@ -110,11 +121,14 @@ def app():
     }
 
     sims = []
-    for i in range(nsim):
-        sims.append(Simulation(params=params, seed=seed + i))
-        sims[-1].run()
+    with st.spinner("Running simulation..."):
+        tic = time.perf_counter()
+        for i in range(nsim):
+            sims.append(Simulation(params=params, seed=seed + i))
+            sims[-1].run()
+        toc = time.perf_counter()
 
-    st.text(f"Ran {nsim} simulations")
+    st.text(f"Ran {nsim} simulations in {format_duration(toc - tic)}")
 
     st.subheader(
         f"R0 is {infectious_duration * infection_rate:.2f}",
