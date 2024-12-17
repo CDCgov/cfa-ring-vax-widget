@@ -1,13 +1,13 @@
 import altair as alt
 import graphviz
-import polars as pl
 import streamlit as st
 
 from ringvax import Simulation
 from ringvax.summary import (
     get_all_person_properties,
+    get_outbreak_size_df,
+    prob_control_by_gen,
     summarize_detections,
-    summarize_generations,
     summarize_infections,
 )
 
@@ -92,7 +92,7 @@ def app():
         )
         n_generations = st.number_input("Number of generations", value=4, step=1)
         max_infections = st.number_input(
-            "Maximum number of infections", value=100, step=10, min_value=10
+            "Maximum number of infections", value=100, step=10, min_value=100
         )
         seed = st.number_input("Random seed", value=1234, step=1)
         nsim = st.number_input("Number of simulations", value=250, step=1)
@@ -125,6 +125,20 @@ def app():
     with tab1:
         sim_df = get_all_person_properties(sims)
 
+        pr_control = prob_control_by_gen(sim_df, 3)
+        st.header(f"Probability of control: {pr_control:.2f}")
+
+        st.header("Distribution of total number of infections")
+        st.write("(Conditioned on not hitting `max_infections`.)")
+        st.altair_chart(
+            alt.Chart(get_outbreak_size_df(sim_df))
+            .mark_bar()
+            .encode(
+                alt.X("size:Q", bin=True, title="Number of infections"),
+                y="count()",
+            )
+        )
+
         st.header("Summary of dynamics")
         infection = summarize_infections(sim_df)
         st.write(
@@ -146,52 +160,11 @@ def app():
             )
         )
 
-        st.header("Extinction probability by generation")
-        df = summarize_generations(sims).with_columns(
-            mean_size_low=(pl.col("mean_size") - pl.col("size_standard_error")),
-            mean_size_high=(pl.col("mean_size") + pl.col("size_standard_error")),
-            prob_extinct_low=(
-                pl.col("prob_extinct") - pl.col("extinction_standard_error")
-            ),
-            prob_extinct_high=(
-                pl.col("prob_extinct") + pl.col("extinction_standard_error")
-            ),
-        )
-
-        size_plot = alt.Chart(df)
-
-        # Plot containment probability
-        points = size_plot.mark_point(filled=True, size=50, color="black").encode(
-            alt.X("generation"), alt.Y("prob_extinct")
-        )
-
-        # generate the error bars
-        errorbars = size_plot.mark_errorbar().encode(
-            x=alt.X("generation", title="Generation"),
-            y=alt.Y("prob_extinct_low:Q", title="Cumulative containment probability"),
-            y2="prob_extinct_high:Q",
-        )
-
-        st.altair_chart((points + errorbars))  # type: ignore
-
-        st.header("Number of infections by generation")
-        # Plot average size
-        points = size_plot.mark_point(filled=True, size=50, color="black").encode(
-            alt.X("generation"), alt.Y("mean_size")
-        )
-
-        # generate the error bars
-        errorbars = size_plot.mark_errorbar().encode(
-            x=alt.X("generation", title="Generation"),
-            y=alt.Y("mean_size_low:Q", title="Mean number of infections"),
-            y2="mean_size_high:Q",
-        )
-
-        st.altair_chart((points + errorbars))  # type: ignore
-
     with tab2:
         st.header("Graph of infections")
-        idx = st.number_input("Simulation to plot", min_value=0, max_value=nsim, value=0)
+        idx = st.number_input(
+            "Simulation to plot", min_value=0, max_value=nsim, value=0
+        )
         st.graphviz_chart(make_graph(sims[idx]))
 
 
