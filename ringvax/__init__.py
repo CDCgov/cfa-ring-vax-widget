@@ -61,6 +61,14 @@ class Simulation:
             id = self.create_person()
             self.generate_infection(id=id, t_exposed=t_exposed, infector=infector)
 
+            if (
+                len(infection_queue) == 0
+                and len(self.get_person_property(id, "infection_times")) == 0
+            ):
+                termination["criterion"] = "extinction"
+                termination["last_complete_generation"] = max(
+                    self.infections[id]["generation"] for id in self.infections
+                )
             # add the infections they caused to the end of the queue,
             # unless we are past the number of generations
             if (
@@ -71,12 +79,6 @@ class Simulation:
                 # the max. # of infections
                 for t in self.get_person_property(id, "infection_times"):
                     bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
-
-            if len(infection_queue) == 0:
-                termination["criterion"] = "extinction"
-                termination["last_complete_generation"] = max(
-                    infection["generation"] for infection in self.infections
-                )
 
             if len(self.query_people()) >= self.params["max_infections"]:
                 termination["max_infections"] = True
@@ -89,6 +91,8 @@ class Simulation:
         if termination["criterion"] == "":
             termination["criterion"] = "max_generations"
             termination["last_complete_generation"] = self.params["n_generations"]
+
+        self.termination = termination
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
