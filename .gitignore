@@ -37,8 +37,6 @@
 # Allowlist
 # !your_data_file.csv
 # !your_data_directory/
-!docs/*
-!docs/approach.md
 
 
 #####
