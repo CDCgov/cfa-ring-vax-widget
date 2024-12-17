@@ -10,9 +10,7 @@ def make_graph(sim: Simulation):
         infector = sim.get_person_property(infectee, "infector")
 
         color = (
-            "black"
-            if not sim.get_person_property(infectee, "detected")
-            else "#068482"
+            "black" if not sim.get_person_property(infectee, "detected") else "#068482"
         )
 
         graph.node(str(infectee), color=color)
