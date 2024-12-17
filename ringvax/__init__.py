@@ -143,7 +143,7 @@ class Simulation:
             detected = True
             detect_method = "passive"
             t_detected = (
-                self.get_person_property(id, "t_infectious")
+                self.get_person_property(id, "t_exposed")
                 + self.generate_passive_detection_delay()
             )
 
@@ -161,10 +161,7 @@ class Simulation:
             if not detected or t_active_detected < t_detected:
                 detected = True
                 detect_method = "active"
-                t_detected = (
-                    self.get_person_property(id, "t_exposed")
-                    + self.generate_passive_detection_delay()
-                )
+                t_detected = t_active_detected
 
         t_recovered = self.get_person_property(id, "t_recovered")
         if detected and t_detected >= t_recovered:
