@@ -1,3 +1,5 @@
+import time
+
 import graphviz
 import streamlit as st
 
@@ -19,6 +21,15 @@ def make_graph(sim: Simulation):
             graph.edge(str(infector), str(infectee))
 
     return graph
+
+
+def format_duration(x: float, digits=3) -> str:
+    assert x >= 0
+    min_time = 10 ** (-digits)
+    if x < min_time:
+        return f"<{min_time} seconds"
+    else:
+        return f"{round(x, digits)} seconds"
 
 
 def app():
@@ -105,7 +116,13 @@ def app():
     )
 
     s = Simulation(params=params, seed=seed)
-    s.run()
+
+    with st.spinner("Running simulation..."):
+        tic = time.perf_counter()
+        s.run()
+        toc = time.perf_counter()
+
+    st.text(f"Simulation ran in {format_duration(toc - tic)}")
 
     st.header("Graph of infections")
     st.graphviz_chart(make_graph(s))
