@@ -189,9 +189,7 @@ def app():
         )
         detection = summarize_detections(sim_df)
         st.dataframe(
-            detection.select(
-                pl.col(col).round_sig_figs(2) for col in detection.columns
-            ).rename(
+            detection.select(pl.col(col).round(2) for col in detection.columns).rename(
                 {
                     "prob_detect": "Any detection",
                     "prob_active": "Active detection",
