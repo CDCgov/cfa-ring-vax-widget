@@ -31,10 +31,10 @@ def infection_to_predf(infection: dict) -> dict:
     for k, v in infection.items():
         if isinstance(v, np.ndarray):
             assert k == "infection_times"
-            dfable |= {k: [[float(vv) for vv in v]]}
+            dfable |= {k: [float(vv) for vv in v]}
         else:
             assert isinstance(v, str) or not isinstance(v, Container)
-            dfable |= {k: [v]}
+            dfable |= {k: v}
     return dfable
 
 
@@ -54,18 +54,14 @@ def get_all_person_properties(sims: Sequence[Simulation]) -> pl.DataFrame:
 
     per_sim = []
     for idx, sim in enumerate(sims):
-        per_sim.append(
-            pl.concat(
-                [
-                    (
-                        pl.DataFrame(
-                            infection_to_predf(infection) | {"simulation": [idx]}
-                        ).cast(infection_schema)  # type: ignore
-                    )
-                    for infection in sim.infections.values()
-                ]
-            )
-        )
+        sims_dict = {k: [] for k in infection_schema.keys()} | {
+            "simulation": [idx] * len(sim.infections)
+        }
+        for infection in sim.infections.values():
+            predf = infection_to_predf(infection)
+            for k in infection_schema.keys():
+                sims_dict[k].append(predf[k])
+        per_sim.append(pl.DataFrame(sims_dict).cast(infection_schema))  # type: ignore
     return pl.concat(per_sim)
 
 
