@@ -129,8 +129,20 @@ def summarize_infections(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
-    g_max = df.group_by("simulation").agg(pl.col("generation").max())
-    return (g_max.filter(pl.col("generation") < gen).shape[0]) / (g_max.shape[0])
+    n_sim = df["simulation"].unique().len()
+    size_at_gen = (
+        df.with_columns(
+            pl.col("generation") + 1,
+            n_infections=pl.col("infection_times").list.len(),
+        )
+        .with_columns(size=pl.sum("n_infections").over("simulation", "generation"))
+        .unique(subset=["simulation", "generation"])
+        .filter(
+            pl.col("generation") == gen,
+            pl.col("size") > 0,
+        )
+    )
+    return 1.0 - (size_at_gen.shape[0] / n_sim)
 
 
 def get_outbreak_size_df(df: pl.DataFrame) -> pl.DataFrame:

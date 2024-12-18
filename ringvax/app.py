@@ -2,6 +2,7 @@ import time
 
 import altair as alt
 import graphviz
+import polars as pl
 import streamlit as st
 
 from ringvax import Simulation
@@ -29,6 +30,17 @@ def make_graph(sim: Simulation):
             graph.edge(str(infector), str(infectee))
 
     return graph
+
+
+def format_control_gens(gen: int):
+    if gen == 0:
+        return "index_case"
+    if gen == 1:
+        return "contacts"
+    elif gen > 1:
+        return "".join(["contacts of "] * (gen - 1)) + "contacts"
+    else:
+        raise RuntimeError("Must specify `gen` >= 0.")
 
 
 def format_duration(x: float, digits=3) -> str:
@@ -102,9 +114,19 @@ def app():
             step=0.1,
             format="%.1f days",
         )
-        n_generations = st.number_input("Number of generations", value=4, step=1)
+        n_generations = st.number_input(
+            "Number of simulated generations", value=4, step=1
+        )
+        control_generations = st.number_input(
+            "Degree of contacts for checking control",
+            value=3,
+            step=1,
+            min_value=1,
+            max_value=n_generations + 1,
+            help="Successful control is defined as no infections in contacts at this degree. Set to 1 for contacts of the index case, 2 for contacts of contacts, etc. Equivalent to checking for extinction in the specified generation.",
+        )
         max_infections = st.number_input(
-            "Maximum number of infections", value=100, step=10, min_value=100
+            "Maximum number of infections", value=100, step=10, min_value=100, help=""
         )
         seed = st.number_input("Random seed", value=1234, step=1)
         nsim = st.number_input("Number of simulations", value=250, step=1)
@@ -129,28 +151,30 @@ def app():
             sims[-1].run()
         toc = time.perf_counter()
 
-    st.text(f"Ran {nsim} simulations in {format_duration(toc - tic)}")
-
-    st.subheader(
-        f"R0 is {infectious_duration * infection_rate:.2f}",
-        help="R0 is the average duration of infection multiplied by the infectious rate.",
+    st.write(
+        f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ of {infectious_duration * infection_rate:.2f} (the product of the average duration of infection and the infectious rate)."
     )
 
     tab1, tab2 = st.tabs(["Simulation summary", "Per-simulation results"])
     with tab1:
         sim_df = get_all_person_properties(sims)
 
-        pr_control = prob_control_by_gen(sim_df, 3)
-        st.header(f"Probability of control: {pr_control:.2f}")
+        pr_control = prob_control_by_gen(sim_df, control_generations)
+        st.header(
+            f"Probability of control: {pr_control:.2f}",
+            help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
+        )
 
-        st.header("Distribution of total number of infections")
-        st.write("(Conditioned on not hitting `max_infections`.)")
+        st.header("Number of infections")
+        st.write(
+            "Distribution of the number of infections across the simulated generations."
+        )
         st.altair_chart(
             alt.Chart(get_outbreak_size_df(sim_df))
             .mark_bar()
             .encode(
-                alt.X("size:Q", bin=True, title="Number of infections"),
-                y="count()",
+                x=alt.X("size:Q", bin=True, title="Number of infections"),
+                y=alt.Y("count()", title="Count"),
             )
         )
 
@@ -161,11 +185,13 @@ def app():
         )
 
         st.write(
-            "The following table provides summaries of _marginal_ probabilities regarding detection."
+            "The following table provides summaries of marginal probabilities regarding detection. Marginal meaning that any "
         )
         detection = summarize_detections(sim_df)
         st.dataframe(
-            detection.rename(
+            detection.select(
+                pl.col(col).round_sig_figs(2) for col in detection.columns
+            ).rename(
                 {
                     "prob_detect": "Any detection",
                     "prob_active": "Active detection",
