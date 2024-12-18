@@ -24,7 +24,7 @@ class Simulation:
         self.seed = seed
         self.rng = numpy.random.default_rng(self.seed)
         self.infections = {}
-        self.termination = {}
+        self.termination: Optional[str] = None
 
     def create_person(self) -> str:
         """Add a new person to the data"""
@@ -67,52 +67,45 @@ class Simulation:
         # queue is pairs (t_exposed, infector)
         # start with the index infection
         infection_queue: List[tuple[float, Optional[str]]] = [(0.0, None)]
-        termination = {"criterion": "", "last_complete_generation": -1}
 
-        while (
-            len(infection_queue) > 0
-            and len(self.query_people()) < self.params["max_infections"]
-        ):
-            # find the person who is infected next. this ensures that, if we stop the
-            # simulation after some number of infections, the first infections were done
-            # first
+        passed_max_generations = False
+
+        while True:
+            # Check if we need to stop the loop
+            n_infections = len(self.query_people())
+
+            if len(infection_queue) == 0 and not passed_max_generations:
+                self.termination = "extinct"
+                break
+            elif len(infection_queue) == 0 and passed_max_generations:
+                self.termination = "max_generations"
+                break
+            elif n_infections == self.params["max_infections"]:
+                self.termination = "max_infections"
+                break
+            elif n_infections > self.params["max_infections"]:
+                raise RuntimeError("Maximum number of infections exceeded")
+
+            # find the person who is infected next
+            # (the queue is time-sorted, so this is the temporally next infection)
             t_exposed, infector = infection_queue.pop(0)
 
+            # otherwise, instantiate this infection, draw who they in turn infect,
+            # and add the infections they cause to the queue, in time order
             id = self.create_person()
             self.generate_infection(id=id, t_exposed=t_exposed, infector=infector)
 
-            if (
-                len(infection_queue) == 0
-                and len(self.get_person_property(id, "infection_times")) == 0
-            ):
-                termination["criterion"] = "extinction"
-                termination["last_complete_generation"] = max(
-                    self.infections[id]["generation"] for id in self.infections
-                )
-            # add the infections they caused to the end of the queue,
-            # unless we are past the number of generations
-            if (
-                self.get_person_property(id, "generation")
-                < self.params["n_generations"]
-            ):
-                # enqueue the next infections, which will be processed unless we hit
-                # the max. # of infections
-                for t in self.get_person_property(id, "infection_times"):
-                    bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
+            # if the infector is in the final generation, do not add their
+            # infectees to the queue
+            generation = self.get_person_property(id, "generation")
+            if generation == self.params["n_generations"]:
+                passed_max_generations = True
+                continue
+            elif generation > self.params["n_generations"]:
+                raise RuntimeError("Generation count exceeded")
 
-            if len(self.query_people()) >= self.params["max_infections"]:
-                termination["criterion"] = "max_infections"
-                min_in_progress = min(
-                    self.infections[parent]["generation"]
-                    for _, parent in infection_queue
-                )
-                termination["last_complete_generation"] = min_in_progress - 1
-
-        if termination["criterion"] == "":
-            termination["criterion"] = "max_generations"
-            termination["last_complete_generation"] = self.params["n_generations"]
-
-        self.termination = termination
+            for t in self.get_person_property(id, "infection_times"):
+                bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
