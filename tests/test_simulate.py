@@ -16,24 +16,20 @@ def rng():
 def test_infection_delays_zero_rate(rng):
     """If zero rate, zero infections"""
     assert (
-        list(
-            ringvax.Simulation.generate_infection_waiting_times(
-                rng, rate=0.0, infectious_duration=100.0
-            )
-        )
-        == []
+        ringvax.Simulation.generate_infection_waiting_times(
+            rng, rate=0.0, infectious_duration=100.0
+        ).size
+        == 0
     )
 
 
 def test_infection_delays_zero_duration(rng):
     """If zero duration, zero infections"""
     assert (
-        list(
-            ringvax.Simulation.generate_infection_waiting_times(
-                rng, rate=100.0, infectious_duration=0.0
-            )
-        )
-        == []
+        ringvax.Simulation.generate_infection_waiting_times(
+            rng, rate=100.0, infectious_duration=0.0
+        ).size
+        == 0
     )
 
 
@@ -161,3 +157,8 @@ def test_snapshot(rng):
         snapshot = json.load(f)
 
     assert s.infections == snapshot
+    assert len(s.infections) == 10
+
+
+def test_detection_history():
+    pass

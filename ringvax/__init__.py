@@ -48,7 +48,9 @@ class Simulation:
             raise RuntimeError(f"Property '{property}' not in schema")
 
         if id not in self.infections:
-            raise RuntimeError(f"No person with {id=}")
+            raise RuntimeError(
+                f"No person with {id=}; cannot get property '{property}'"
+            )
         elif property not in self.infections[id]:
             raise RuntimeError(f"Person {id=} does not have property '{property}'")
 
@@ -156,11 +158,11 @@ class Simulation:
         detection_history = self.generate_detection_history(id)
         self.update_person(id, detection_history)
 
-        t_start_infectious = disease_history["t_infectious"]
-        if detection_history["detected"]:
-            t_end_infectious = detection_history["t_detected"]
-        else:
-            t_end_infectious = disease_history["t_recovered"]
+        t_end_infectious = (
+            detection_history["t_detected"]
+            if detection_history["detected"]
+            else disease_history["t_recovered"]
+        )
 
         # when do they infect people?
         infection_rate = self.generate_infection_rate()
@@ -168,17 +170,16 @@ class Simulation:
         if disease_history["t_infectious"] > t_end_infectious:
             infection_times = np.array([])
         else:
-            infection_times = (
-                t_start_infectious
-                + self.generate_infection_waiting_times(
-                    self.rng,
-                    rate=infection_rate,
-                    infectious_duration=(
-                        t_end_infectious - disease_history["t_infectious"]
-                    ),
-                )
+            infection_times = disease_history[
+                "t_infectious"
+            ] + self.generate_infection_waiting_times(
+                self.rng,
+                rate=infection_rate,
+                infectious_duration=(
+                    t_end_infectious - disease_history["t_infectious"]
+                ),
             )
-            assert (infection_times >= t_start_infectious).all()
+            assert (infection_times >= disease_history["t_infectious"]).all()
             assert (infection_times <= t_end_infectious).all()
 
         self.update_person(id, {"infection_times": infection_times})
@@ -201,48 +202,71 @@ class Simulation:
 
     def generate_detection_history(self, id: str) -> dict[str, Any]:
         """Determine if a person is infected, and when"""
+        # determine properties of the infector
         infector = self.get_person_property(id, "infector")
 
-        detected = False
-        detect_method = None
-        t_detected = None
-
-        passive_detected = self.bernoulli(self.params["p_passive_detect"])
-        if passive_detected:
-            detected = True
-            detect_method = "passive"
-            t_detected = (
-                self.get_person_property(id, "t_exposed")
-                + self.generate_passive_detection_delay()
-            )
-
-        active_detected = (
-            infector is not None
-            and self.get_person_property(infector, "detected")
-            and self.bernoulli(self.params["p_active_detect"])
+        infector_detected = infector is not None and self.get_person_property(
+            infector, "detected"
         )
 
-        if active_detected:
-            t_active_detected = (
-                self.get_person_property(infector, "t_detected")
-                + self.generate_active_detection_delay()
-            )
-            if not detected or t_active_detected < t_detected:
-                detected = True
-                detect_method = "active"
-                t_detected = t_active_detected
+        t_infector_detected = (
+            self.get_person_property(infector, "t_detected")
+            if infector_detected
+            else None
+        )
 
-        t_recovered = self.get_person_property(id, "t_recovered")
-        if detected and t_detected >= t_recovered:
-            detected = False
-            detect_method = None
-            t_detected = None
+        # determine what kinds of detection this individual is eligible for
+        potentially_passive_detected = self.bernoulli(self.params["p_passive_detect"])
 
-        return {
-            "detected": detected,
-            "detect_method": detect_method,
-            "t_detected": t_detected,
-        }
+        potentially_active_detected = infector_detected and self.bernoulli(
+            self.params["p_active_detect"]
+        )
+
+        # actually determine what kind of detection occurred, if any
+        return self.resolve_detection_history(
+            potentially_passive_detected=potentially_passive_detected,
+            potentially_active_detected=potentially_active_detected,
+            passive_detection_delay=self.generate_passive_detection_delay(),
+            active_detection_delay=self.generate_active_detection_delay(),
+            t_exposed=self.get_person_property(id, "t_exposed"),
+            t_recovered=self.get_person_property(id, "t_recovered"),
+            t_infector_detected=t_infector_detected,
+        )
+
+    @staticmethod
+    def resolve_detection_history(
+        potentially_passive_detected: bool,
+        potentially_active_detected: bool,
+        passive_detection_delay: float,
+        active_detection_delay: float,
+        t_exposed: float,
+        t_recovered: float,
+        t_infector_detected: Optional[float],
+    ) -> dict[str, Any]:
+        # a "detection" is a tuple (time, method)
+        detections = []
+
+        # keep track of passive and active possibilities
+        if potentially_passive_detected:
+            detections.append((t_exposed + passive_detection_delay, "passive"))
+
+        if potentially_active_detected:
+            assert t_infector_detected is not None
+            detections.append((t_infector_detected + active_detection_delay, "active"))
+
+        # detection only actually happens if it's before recovery
+        detections = [x for x in detections if x[0] < t_recovered]
+
+        if len(detections) == 0:
+            return {"detected": False, "t_detected": None, "detect_method": None}
+        else:
+            # choose the earliest detection
+            detection = min(detections, key=lambda x: x[0])
+            return {
+                "detected": True,
+                "t_detected": detection[0],
+                "detect_method": detection[1],
+            }
 
     def generate_latent_duration(self) -> float:
         return self.params["latent_duration"]
