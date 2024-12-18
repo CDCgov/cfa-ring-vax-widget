@@ -6,18 +6,20 @@ import polars as pl
 
 from ringvax import Simulation
 
-infection_schema = {
-    "infector": pl.String,
-    "generation": pl.Int64,
-    "t_exposed": pl.Float64,
-    "t_infectious": pl.Float64,
-    "t_recovered": pl.Float64,
-    "infection_rate": pl.Float64,
-    "detected": pl.Boolean,
-    "detect_method": pl.String,
-    "t_detected": pl.Float64,
-    "infection_times": pl.List(pl.Float64),
-}
+infection_schema = pl.Schema(
+    {
+        "infector": pl.String,
+        "generation": pl.Int64,
+        "t_exposed": pl.Float64,
+        "t_infectious": pl.Float64,
+        "t_recovered": pl.Float64,
+        "infection_rate": pl.Float64,
+        "detected": pl.Boolean,
+        "detect_method": pl.String,
+        "t_detected": pl.Float64,
+        "infection_times": pl.List(pl.Float64),
+    }
+)
 """
 An infection as a polars schema
 """
@@ -70,7 +72,7 @@ def get_person_properties(sim: Simulation) -> pl.DataFrame:
         for k in infection_schema.keys():
             sims_dict[k].append(prep[k])
 
-    return pl.DataFrame(sims_dict).cast(infection_schema)  # type: ignore
+    return pl.DataFrame(sims_dict, schema=infection_schema)
 
 
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
