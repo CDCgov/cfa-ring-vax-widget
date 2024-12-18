@@ -186,7 +186,7 @@ def app():
 
         pr_control = prob_control_by_gen(sim_df, control_generations)
         st.header(
-            f"Probability of control: {(pr_control * 100):.0f}%",
+            f"Probability of control: {pr_control:.0%}",
             help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
         )
 
