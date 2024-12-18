@@ -54,8 +54,6 @@ def get_all_person_properties(sims: Sequence[Simulation]) -> pl.DataFrame:
 
     per_sim = []
     for idx, sim in enumerate(sims):
-        g_max.append(sim.params["n_generations"])
-        i_max.append(sim.params["max_infections"])
         per_sim.append(
             pl.concat(
                 [
