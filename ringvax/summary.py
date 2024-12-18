@@ -44,28 +44,33 @@ def get_all_person_properties(
     """
     Get a dataframe of all properties of all infections
     """
-    g_max = [sim.params["n_generations"] for sim in sims]
     assert (
-        len(Counter(g_max).items()) == 1
+        len(set(sim.params["n_generations"] for sim in sims)) == 1
     ), "Aggregating simulations with different `n_generations` is nonsensical"
 
-    i_max = [sim.params["max_infections"] for sim in sims]
     assert (
-        len(Counter(i_max).items()) == 1
+        len(set(sim.params["max_infections"] for sim in sims)) == 1
     ), "Aggregating simulations with different `max_infections` is nonsensical"
 
-    per_sim = []
-    for idx, sim in enumerate(sims):
-        if sim.termination["criterion"] not in exclude_termination_if:
-            sims_dict = {k: [] for k in infection_schema.keys()} | {
-                "simulation": [idx] * len(sim.infections)
-            }
-            for infection in sim.infections.values():
-                prep = prepare_for_df(infection)
-                for k in infection_schema.keys():
-                    sims_dict[k].append(prep[k])
-            per_sim.append(pl.DataFrame(sims_dict).cast(infection_schema))  # type: ignore
-    return pl.concat(per_sim)
+    return pl.concat(
+        [
+            get_person_properties(sim).with_columns(simulation=sim_idx)
+            for sim_idx, sim in enumerate(sims)
+            if sim.termination["criterion"] not in exclude_termination_if
+        ]
+    )
+
+
+def get_person_properties(sim: Simulation) -> pl.DataFrame:
+    """Get a DataFrame of all properties of all infections in a simulation"""
+    sims_dict = {k: [] for k in infection_schema.keys()}
+
+    for infection in sim.infections.values():
+        prep = prepare_for_df(infection)
+        for k in infection_schema.keys():
+            sims_dict[k].append(prep[k])
+
+    return pl.DataFrame(sims_dict).cast(infection_schema)  # type: ignore
 
 
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
