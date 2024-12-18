@@ -148,7 +148,7 @@ def app():
             )
             max_infections = st.number_input(
                 "Maximum number of infections",
-                value=100,
+                value=1000,
                 step=10,
                 min_value=100,
                 help="",
@@ -169,7 +169,9 @@ def app():
     }
 
     sims = []
-    with st.spinner("Running simulation..."):
+    with st.spinner(
+        "Running simulation... Slow simulations may indicate unreasonable parameter values leading to unrealistically large outbreaks."
+    ):
         tic = time.perf_counter()
         for i in range(nsim):
             sims.append(Simulation(params=params, seed=seed + i))
@@ -180,60 +182,102 @@ def app():
         f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ of {infectious_duration * infection_rate:.2f} (the product of the average duration of infection and the infectious rate)."
     )
 
-    tab1, tab2 = st.tabs(["Simulation summary", "Per-simulation results"])
-    with tab1:
-        sim_df = get_all_person_properties(sims)
+    n_at_max = sum(
+        1 for sim in sims if sim.termination["criterion"] == "max_infections"
+    )
 
-        pr_control = prob_control_by_gen(sim_df, control_generations)
-        st.header(
-            f"Probability of control: {pr_control:.0%}",
-            help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
+    show = True if n_at_max == 0 else False
+    if not show:
+        st.warning(
+            body=(
+                f"{n_at_max} simulations hit the specified maximum number of infections ({max_infections})."
+            ),
+            icon="🚨",
         )
 
-        st.header("Number of infections")
-        st.write(
-            f"Distribution of the total number of infections seen in {n_generations} generations."
+        st.warning(
+            body=(
+                "Simulations hitting the maximum likely indicate implausible parameter values. "
+                'It is recommended that you either adjust simulating parameters or increase "Maximum number of infections".'
+            ),
         )
-        st.altair_chart(
-            alt.Chart(get_outbreak_size_df(sim_df))
-            .mark_bar()
-            .encode(
-                x=alt.X("size:Q", bin=True, title="Number of infections"),
-                y=alt.Y("count()", title="Count"),
+
+        st.warning(
+            body=(
+                "Note that results are summarized only for simulations which do not exceed this maximum. "
+                "This means that simulations with large final sizes will be missing from the results, biasing results. "
+            ),
+        )
+
+        accept_terms_and_conditions = st.button(
+            "I accept that the results are biased and may not be meaningful. Please show them anyways."
+        )
+        if accept_terms_and_conditions:
+            show = True
+
+    if show:
+        if n_at_max == nsim:
+            st.error(
+                "No simulations completed successfully. Please change settings and try again.",
+                icon="🚨",
             )
-        )
+            st.stop()
 
-        st.header("Summary of dynamics")
-        infection = summarize_infections(sim_df)
-        st.write(
-            f"In these simulations, the average duration of infectiousness was {infection['mean_infectious_duration'][0]:.2f} and $R_e$ was {infection['mean_n_infections'][0]:.2f}"
-        )
+        tab1, tab2 = st.tabs(["Simulation summary", "Per-simulation results"])
+        with tab1:
+            sim_df = get_all_person_properties(sims)
 
-        st.write(
-            "The following table provides summaries of marginal probabilities regarding detection. Aside from the marginal probability of active detection, these are the observed probabilities that any individual is detected in this manner. The marginal probability of active detection excludes index cases, which are not eligible for active detection."
-        )
-        detection = summarize_detections(sim_df)
-        st.dataframe(
-            detection.select(
-                (pl.col(col) * 100).round(0).cast(pl.Int64) for col in detection.columns
+            pr_control = prob_control_by_gen(sim_df, control_generations)
+            st.header(
+                f"Probability of control: {pr_control:.0%}",
+                help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
             )
-            .with_columns(
-                pl.concat_str([pl.col(col), pl.lit("%")], separator="")
-                for col in detection.columns
-            )
-            .rename(
-                {
-                    "prob_detect": "Any detection",
-                    "prob_active": "Active detection",
-                    "prob_passive": "Passive detection",
-                    "prob_detect_before_infectious": "Detection before onset of infectiousness",
-                }
-            )
-        )
 
-    with tab2:
-        st.header("Graph of infections")
-        show_graph(sims=sims)
+            st.header("Number of infections")
+            st.write(
+                f"Distribution of the total number of infections seen in {n_generations} generations."
+            )
+            st.altair_chart(
+                alt.Chart(get_outbreak_size_df(sim_df))
+                .mark_bar()
+                .encode(
+                    x=alt.X("size:Q", bin=True, title="Number of infections"),
+                    y=alt.Y("count()", title="Count"),
+                )
+            )
+
+            st.header("Summary of dynamics")
+            infection = summarize_infections(sim_df)
+            st.write(
+                f"In these simulations, the average duration of infectiousness was {infection['mean_infectious_duration'][0]:.2f} and $R_e$ was {infection['mean_n_infections'][0]:.2f}"
+            )
+
+            st.write(
+                "The following table provides summaries of marginal probabilities regarding detection. Aside from the marginal probability of active detection, these are the observed probabilities that any individual is detected in this manner. The marginal probability of active detection excludes index cases, which are not eligible for active detection."
+            )
+            detection = summarize_detections(sim_df)
+            st.dataframe(
+                detection.select(
+                    (pl.col(col) * 100).round(0).cast(pl.Int64)
+                    for col in detection.columns
+                )
+                .with_columns(
+                    pl.concat_str([pl.col(col), pl.lit("%")], separator="")
+                    for col in detection.columns
+                )
+                .rename(
+                    {
+                        "prob_detect": "Any detection",
+                        "prob_active": "Active detection",
+                        "prob_passive": "Passive detection",
+                        "prob_detect_before_infectious": "Detection before onset of infectiousness",
+                    }
+                )
+            )
+
+        with tab2:
+            st.header("Graph of infections")
+            show_graph(sims=sims)
 
 
 if __name__ == "__main__":

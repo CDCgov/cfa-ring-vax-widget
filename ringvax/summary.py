@@ -38,7 +38,9 @@ def prepare_for_df(infection: dict) -> dict:
     return dfable
 
 
-def get_all_person_properties(sims: Sequence[Simulation]) -> pl.DataFrame:
+def get_all_person_properties(
+    sims: Sequence[Simulation], exclude_termination_if: list[str] = ["max_infections"]
+) -> pl.DataFrame:
     """
     Get a dataframe of all properties of all infections
     """
@@ -54,14 +56,15 @@ def get_all_person_properties(sims: Sequence[Simulation]) -> pl.DataFrame:
 
     per_sim = []
     for idx, sim in enumerate(sims):
-        sims_dict = {k: [] for k in infection_schema.keys()} | {
-            "simulation": [idx] * len(sim.infections)
-        }
-        for infection in sim.infections.values():
-            prep = prepare_for_df(infection)
-            for k in infection_schema.keys():
-                sims_dict[k].append(prep[k])
-        per_sim.append(pl.DataFrame(sims_dict).cast(infection_schema))  # type: ignore
+        if sim.termination["criterion"] not in exclude_termination_if:
+            sims_dict = {k: [] for k in infection_schema.keys()} | {
+                "simulation": [idx] * len(sim.infections)
+            }
+            for infection in sim.infections.values():
+                prep = prepare_for_df(infection)
+                for k in infection_schema.keys():
+                    sims_dict[k].append(prep[k])
+            per_sim.append(pl.DataFrame(sims_dict).cast(infection_schema))  # type: ignore
     return pl.concat(per_sim)
 
 

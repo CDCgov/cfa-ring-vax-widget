@@ -81,7 +81,7 @@ class Simulation:
                     bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
 
             if len(self.query_people()) >= self.params["max_infections"]:
-                termination["max_infections"] = True
+                termination["criterion"] = "max_infections"
                 min_in_progress = min(
                     self.infections[parent]["generation"]
                     for _, parent in infection_queue
