@@ -10,8 +10,9 @@ Ring vaccination is a public health strategy to control the spread of an infecti
 - post-exposure vaccination is effective at preventing transmission
 - contact tracing and vaccinating a high fraction of contacts of contacts
 
-
 In contrast with pro-active vaccination of individuals based on their prior known risk factors, ring vaccination is a form of reactive vaccination.
+
+In the real world, ring vaccination can be an effective strategy for both controlling transmission and preventing disease from developing in contacts. This widget focuses on simulating a simplified ring vaccination intervention using a branching process model to investigate it's potential to control transmission in a population. This means that some of the above factors have been simplified in the model and that we are not explicitly modeling the benefit of reduced disease burden separate from reduced transmission (see our [README](../README.md) for more model details).
 
 ## Use of ring vaccination in the past
 
@@ -21,4 +22,8 @@ Ring vaccination has also been an effective strategy in limiting spread of Ebola
 
 ## Contact tracing
 
-Part of a successful ring vaccination strategy is highly effective contact tracing. Estimates of contact tracing for Ebola have varied substantially between outbreaks and settings, however in West African outbreaks high contract tracing rates have been achieved [needs a link].
+Part of a successful ring vaccination strategy is highly effective contact tracing. Estimates of contact tracing vary widely between outbreaks and settings. In some cases, high contact tracing can be achieved when symptoms are unambiguous and conditions are right for health officials and the public to work together to identify and share their contacts.
+
+In contrast with airborne diseases and diseases spread through direct contact with bodily fluids or skin-to-skin contact, contact tracing can be less successful for sexually transmitted diseases. [Stigma associated with having a sexually transmitted disease or the fear of disclosing sexual partners can hinder contact tracing](doi: 10.2105/AJPH.2022.306842). As a result, we expect that contact tracing for a sexually transmitted disease in most settings would be less successful than for Ebola or smallpox.
+
+Contact tracing combined with other interventions can also be effective at controlling transmission. Modeling studies on the control of COVID-19
