@@ -16,17 +16,19 @@ from ringvax.summary import (
 )
 
 
-def make_graph(sim: Simulation) -> graphviz.Digraph:
-    """Make a transmission graph"""
+def make_graph(sim: Simulation):
     graph = graphviz.Digraph()
     for infectee in sim.query_people():
         infector = sim.get_person_property(infectee, "infector")
 
-        color = (
-            "black" if not sim.get_person_property(infectee, "detected") else "#068482"
-        )
+        color = "white"
+        if sim.get_person_property(infectee, "detected"):
+            if sim.get_person_property(infectee, "detect_method") == "active":
+                color = "#06848290"
+            else:
+                color = "#c7dcdd90"
 
-        graph.node(str(infectee), color=color)
+        graph.node(str(infectee), fillcolor=color, style="filled")
 
         if infector is not None:
             graph.edge(str(infector), str(infectee))
@@ -214,9 +216,7 @@ def app():
         )
         detection = summarize_detections(sim_df)
         st.dataframe(
-            detection.select(
-                (pl.col(col) * 100).round(0).cast(pl.Int64) for col in detection.columns
-            )
+            detection.select((pl.all() * 100).round(0).cast(pl.Int64))
             .with_columns(
                 pl.concat_str([pl.col(col), pl.lit("%")], separator="")
                 for col in detection.columns
