@@ -173,7 +173,7 @@ def app():
 
         st.header("Number of infections")
         st.write(
-            "Distribution of the number of infections across the simulated generations."
+            f"Distribution of the total number of infections seen in {n_generations} generations."
         )
         st.altair_chart(
             alt.Chart(get_outbreak_size_df(sim_df))
