@@ -9,7 +9,7 @@ import streamlit as st
 from ringvax import Simulation
 from ringvax.summary import (
     get_all_person_properties,
-    get_outbreak_size_df,
+    get_total_infection_count_df,
     prob_control_by_gen,
     summarize_detections,
     summarize_infections,
@@ -170,7 +170,7 @@ def app():
 
     sims = []
     with st.spinner(
-        "Running simulation... Slow simulations may indicate unreasonable parameter values leading to unrealistically large outbreaks."
+        "Running simulation... Slow simulations may indicate unreasonable parameter values leading to unrealistically large total numbers of infections."
     ):
         tic = time.perf_counter()
         for i in range(nsim):
@@ -238,7 +238,7 @@ def app():
                 f"Distribution of the total number of infections seen in {n_generations} generations."
             )
             st.altair_chart(
-                alt.Chart(get_outbreak_size_df(sim_df))
+                alt.Chart(get_total_infection_count_df(sim_df))
                 .mark_bar()
                 .encode(
                     x=alt.X("size:Q", bin=True, title="Number of infections"),

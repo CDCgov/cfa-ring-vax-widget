@@ -151,7 +151,7 @@ def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
     return 1.0 - (size_at_gen.shape[0] / n_sim)
 
 
-def get_outbreak_size_df(df: pl.DataFrame) -> pl.DataFrame:
+def get_total_infection_count_df(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get DataFrame of all total outbreak sizes from simulations
     """
