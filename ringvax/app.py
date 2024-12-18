@@ -114,22 +114,28 @@ def app():
             step=0.1,
             format="%.1f days",
         )
-        n_generations = st.number_input(
-            "Number of simulated generations", value=4, step=1
-        )
-        control_generations = st.number_input(
-            "Degree of contacts for checking control",
-            value=3,
-            step=1,
-            min_value=1,
-            max_value=n_generations + 1,
-            help="Successful control is defined as no infections in contacts at this degree. Set to 1 for contacts of the index case, 2 for contacts of contacts, etc. Equivalent to checking for extinction in the specified generation.",
-        )
-        max_infections = st.number_input(
-            "Maximum number of infections", value=100, step=10, min_value=100, help=""
-        )
-        seed = st.number_input("Random seed", value=1234, step=1)
-        nsim = st.number_input("Number of simulations", value=250, step=1)
+
+        with st.expander("Advanced Options"):
+            n_generations = st.number_input(
+                "Number of simulated generations", value=4, step=1
+            )
+            control_generations = st.number_input(
+                "Degree of contacts for checking control",
+                value=3,
+                step=1,
+                min_value=1,
+                max_value=n_generations + 1,
+                help="Successful control is defined as no infections in contacts at this degree. Set to 1 for contacts of the index case, 2 for contacts of contacts, etc. Equivalent to checking for extinction in the specified generation.",
+            )
+            max_infections = st.number_input(
+                "Maximum number of infections",
+                value=100,
+                step=10,
+                min_value=100,
+                help="",
+            )
+            seed = st.number_input("Random seed", value=1234, step=1)
+            nsim = st.number_input("Number of simulations", value=250, step=1)
 
     params = {
         "n_generations": n_generations,
@@ -161,7 +167,7 @@ def app():
 
         pr_control = prob_control_by_gen(sim_df, control_generations)
         st.header(
-            f"Probability of control: {pr_control:.2f}",
+            f"Probability of control: {(pr_control * 100):.0f}%",
             help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
         )
 
@@ -189,7 +195,14 @@ def app():
         )
         detection = summarize_detections(sim_df)
         st.dataframe(
-            detection.select(pl.col(col).round(2) for col in detection.columns).rename(
+            detection.select(
+                (pl.col(col) * 100).round(0).cast(pl.Int64) for col in detection.columns
+            )
+            .with_columns(
+                pl.concat_str([pl.col(col), pl.lit("%")], separator="")
+                for col in detection.columns
+            )
+            .rename(
                 {
                     "prob_detect": "Any detection",
                     "prob_active": "Active detection",
