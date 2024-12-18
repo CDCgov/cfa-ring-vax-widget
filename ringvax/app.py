@@ -168,16 +168,17 @@ def app():
         "max_infections": max_infections,
     }
 
-    progress_bar = st.progress(
-        0,
-        text="Running simulation... Slow simulations may indicate unreasonable "
-        "parameter values leading to unrealistically large total numbers of infections.",
+    progress_text = (
+        "Running simulation... Slow simulations may indicate unreasonable "
+        "parameter values leading to unrealistically large total numbers of "
+        "infections."
     )
+    progress_bar = st.progress(0, text=progress_text)
 
     sims = []
     tic = time.perf_counter()
     for i in range(nsim):
-        progress_bar.progress(i / nsim)
+        progress_bar.progress(i / nsim, text=progress_text)
         sim = Simulation(params=params, seed=seed + i)
         sim.run()
         sims.append(sim)
