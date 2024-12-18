@@ -1,4 +1,5 @@
 import time
+from typing import List
 
 import altair as alt
 import graphviz
@@ -15,7 +16,8 @@ from ringvax.summary import (
 )
 
 
-def make_graph(sim: Simulation):
+def make_graph(sim: Simulation) -> graphviz.Digraph:
+    """Make a transmission graph"""
     graph = graphviz.Digraph()
     for infectee in sim.query_people():
         infector = sim.get_person_property(infectee, "infector")
@@ -30,6 +32,23 @@ def make_graph(sim: Simulation):
             graph.edge(str(infector), str(infectee))
 
     return graph
+
+
+@st.fragment
+def show_graph(sims: List[Simulation], pause: float = 0.1):
+    """Show a transmission graph. Wrap as st.fragment, to not re-run simulations.
+
+    Args:
+        sims (List[Simulation]): list of simulations
+        pause (float, optional): Number of seconds to pause before displaying
+            new graph. Defaults to 0.1.
+    """
+    idx = st.number_input(
+        "Simulation to plot", min_value=0, max_value=len(sims) - 1, value=0
+    )
+    placeholder = st.empty()
+    time.sleep(pause)
+    placeholder.graphviz_chart(make_graph(sims[idx]))
 
 
 def format_control_gens(gen: int):
@@ -201,10 +220,7 @@ def app():
 
     with tab2:
         st.header("Graph of infections")
-        idx = st.number_input(
-            "Simulation to plot", min_value=0, max_value=nsim, value=0
-        )
-        st.graphviz_chart(make_graph(sims[idx]))
+        show_graph(sims=sims)
 
 
 if __name__ == "__main__":
