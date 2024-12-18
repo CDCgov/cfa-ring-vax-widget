@@ -13,24 +13,20 @@ def rng():
 def test_infection_delays_zero_rate(rng):
     """If zero rate, zero infections"""
     assert (
-        list(
-            ringvax.Simulation.generate_infection_times(
-                rng, rate=0.0, infectious_duration=100.0
-            )
-        )
-        == []
+        ringvax.Simulation.generate_infection_times(
+            rng, rate=0.0, infectious_duration=100.0
+        ).size
+        == 0
     )
 
 
 def test_infection_delays_zero_duration(rng):
     """If zero duration, zero infections"""
     assert (
-        list(
-            ringvax.Simulation.generate_infection_times(
-                rng, rate=100.0, infectious_duration=0.0
-            )
-        )
-        == []
+        ringvax.Simulation.generate_infection_times(
+            rng, rate=100.0, infectious_duration=0.0
+        ).size
+        == 0
     )
 
 
@@ -116,3 +112,7 @@ def test_simulate_max_infections(rng):
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
     assert len(s.infections) == 10
+
+
+def test_detection_history():
+    pass
