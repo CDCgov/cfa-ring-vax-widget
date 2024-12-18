@@ -168,18 +168,27 @@ def app():
         "max_infections": max_infections,
     }
 
+    progress_bar = st.progress(
+        0,
+        text="Running simulation... Slow simulations may indicate unreasonable "
+        "parameter values leading to unrealistically large total numbers of infections.",
+    )
+
     sims = []
-    with st.spinner(
-        "Running simulation... Slow simulations may indicate unreasonable parameter values leading to unrealistically large total numbers of infections."
-    ):
-        tic = time.perf_counter()
-        for i in range(nsim):
-            sims.append(Simulation(params=params, seed=seed + i))
-            sims[-1].run()
-        toc = time.perf_counter()
+    tic = time.perf_counter()
+    for i in range(nsim):
+        progress_bar.progress(i / nsim)
+        sim = Simulation(params=params, seed=seed + i)
+        sim.run()
+        sims.append(sim)
+
+    progress_bar.empty()
+    toc = time.perf_counter()
 
     st.write(
-        f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ of {infectious_duration * infection_rate:.2f} (the product of the average duration of infection and the infectious rate)."
+        f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ "
+        f"of {infectious_duration * infection_rate:.2f} (the product of the "
+        "average duration of infection and the infectious rate)."
     )
 
     n_at_max = sum(
