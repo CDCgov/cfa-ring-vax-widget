@@ -28,7 +28,7 @@ class Simulation:
     def create_person(self) -> str:
         """Add a new person to the data"""
         id = str(len(self.infections))
-        self.infections[id] = {field: None for field in self.PROPERTIES}
+        self.infections[id] = {x: None for x in self.PROPERTIES}
         return id
 
     def update_person(self, id: str, content: dict[str, Any]) -> None:
