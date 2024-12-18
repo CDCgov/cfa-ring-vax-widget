@@ -6,6 +6,19 @@ import numpy.random
 
 
 class Simulation:
+    PROPERTIES = [
+        "infector",
+        "generation",
+        "t_exposed",
+        "t_infectious",
+        "t_recovered",
+        "infection_rate",
+        "detected",
+        "detect_method",
+        "t_detected",
+        "infection_times",
+    ]
+
     def __init__(self, params: dict[str, Any], seed: Optional[int] = None):
         self.params = params
         self.seed = seed
@@ -15,14 +28,21 @@ class Simulation:
     def create_person(self) -> str:
         """Add a new person to the data"""
         id = str(len(self.infections))
-        self.infections[id] = {}
+        self.infections[id] = {field: None for field in self.PROPERTIES}
         return id
 
     def update_person(self, id: str, content: dict[str, Any]) -> None:
+        bad_properties = set(content.keys()) - set(self.PROPERTIES)
+        if len(bad_properties) > 0:
+            raise RuntimeError(f"Properties not in schema: {bad_properties}")
+
         self.infections[id] |= content
 
     def get_person_property(self, id: str, property: str) -> Any:
         """Get a property of a person"""
+        if property not in self.PROPERTIES:
+            raise RuntimeError(f"Property '{property}' not in schema")
+
         if id not in self.infections:
             raise RuntimeError(f"No person with {id=}")
         elif property not in self.infections[id]:

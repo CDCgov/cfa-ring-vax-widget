@@ -84,8 +84,9 @@ def test_generate_disease_history_nonzero(rng):
     }
 
 
-def test_simulate(rng):
-    params = {
+@pytest.fixture
+def base_params():
+    return {
         "n_generations": 4,
         "latent_duration": 1.0,
         "infectious_duration": 3.0,
@@ -96,23 +97,40 @@ def test_simulate(rng):
         "active_detection_delay": 2.0,
         "max_infections": 100,
     }
-    s = ringvax.Simulation(params=params, seed=rng)
+
+
+def test_simulate(rng, base_params):
+    s = ringvax.Simulation(params=base_params, seed=rng)
     s.run()
     assert len(s.infections) == 19
 
 
-def test_simulate_max_infections(rng):
-    params = {
-        "n_generations": 4,
-        "latent_duration": 1.0,
-        "infectious_duration": 3.0,
-        "infection_rate": 1.0,
-        "p_passive_detect": 0.5,
-        "passive_detection_delay": 2.0,
-        "p_active_detect": 0.15,
-        "active_detection_delay": 2.0,
-        "max_infections": 10,
-    }
+def test_simulate_max_infections(rng, base_params):
+    params = base_params
+    params["max_infections"] = 10
     s = ringvax.Simulation(params=params, seed=rng)
     s.run()
     assert len(s.infections) == 10
+
+
+def test_simulate_set_field(rng, base_params):
+    s = ringvax.Simulation(params=base_params, seed=rng)
+    id = s.create_person()
+    s.update_person(id, {"generation": 0})
+    assert s.get_person_property(id, "generation") == 0
+
+
+def test_simulate_error_on_bad_get_property(rng, base_params):
+    s = ringvax.Simulation(params=base_params, seed=rng)
+    id = s.create_person()
+
+    with pytest.raises(RuntimeError, match="foo"):
+        s.get_person_property(id, "foo")
+
+
+def test_simulate_error_on_bad_update_property(rng, base_params):
+    s = ringvax.Simulation(params=base_params, seed=rng)
+    id = s.create_person()
+
+    with pytest.raises(RuntimeError, match="foo"):
+        s.update_person(id, {"foo": 0})
