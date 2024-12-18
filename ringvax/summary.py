@@ -23,9 +23,9 @@ An infection as a polars schema
 """
 
 
-def infection_to_predf(infection: dict) -> dict:
+def prepare_for_df(infection: dict) -> dict:
     """
-    Convert an infection to a dictionary which can be fed to polars.DataFrame()
+    Handle vector-valued infection properties for downstream use in pl.DataFrame
     """
     dfable = {}
     for k, v in infection.items():
@@ -58,14 +58,17 @@ def get_all_person_properties(sims: Sequence[Simulation]) -> pl.DataFrame:
             "simulation": [idx] * len(sim.infections)
         }
         for infection in sim.infections.values():
-            predf = infection_to_predf(infection)
+            prep = prepare_for_df(infection)
             for k in infection_schema.keys():
-                sims_dict[k].append(predf[k])
+                sims_dict[k].append(prep[k])
         per_sim.append(pl.DataFrame(sims_dict).cast(infection_schema))  # type: ignore
     return pl.concat(per_sim)
 
 
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Get marginal detection probabilities from simulations.
+    """
     nsims = len(df["simulation"].unique())
     n_infections = df.shape[0]
     n_active_eligible = n_infections - nsims
@@ -102,6 +105,9 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def summarize_infections(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Get summaries of infectiousness from simulations.
+    """
     df = df.with_columns(
         n_infections=pl.col("infection_times").list.len(),
         t_noninfectious=pl.min_horizontal(
@@ -123,6 +129,9 @@ def summarize_infections(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
+    """
+    Compute the probability of control in generation (probability extinct in or before this generation) for all simulations
+    """
     n_sim = df["simulation"].unique().len()
     size_at_gen = (
         df.with_columns(
@@ -140,6 +149,9 @@ def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
 
 
 def get_outbreak_size_df(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Get DataFrame of all total outbreak sizes from simulations
+    """
     return (
         df.group_by("simulation")
         # length of anything in the grouped dataframe is number of infections
