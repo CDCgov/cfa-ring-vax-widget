@@ -19,10 +19,11 @@ class Simulation:
         "infection_times",
     }
 
-    def __init__(self, params: dict[str, Any], seed: Optional[int] = None):
+    def __init__(
+        self, params: dict[str, Any], rng: Optional[numpy.random.Generator] = None
+    ):
         self.params = params
-        self.seed = seed
-        self.rng = numpy.random.default_rng(self.seed)
+        self.rng = rng if rng is not None else numpy.random.default_rng()
         self.infections = {}
         self.termination: Optional[str] = None
 

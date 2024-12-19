@@ -57,7 +57,7 @@ def test_generate_disease_history(rng):
         "infectious_duration": 1.0,
         "infection_rate": 2.0,
     }
-    s = ringvax.Simulation(params=params, seed=rng)
+    s = ringvax.Simulation(params=params, rng=rng)
     history = s.generate_disease_history(t_exposed=0.0)
     # for ease of testing, make this a list of rounded numbers
 
@@ -77,7 +77,7 @@ def test_generate_disease_history_nonzero(rng):
         "infectious_duration": 1.0,
         "infection_rate": 2.0,
     }
-    s = ringvax.Simulation(params=params, seed=rng)
+    s = ringvax.Simulation(params=params, rng=rng)
     history = s.generate_disease_history(t_exposed=10.0)
     assert history == {
         "t_exposed": 10.0,
@@ -103,7 +103,7 @@ def base_params():
 
 
 def test_simulate(rng, base_params):
-    s = ringvax.Simulation(params=base_params, seed=rng)
+    s = ringvax.Simulation(params=base_params, rng=rng)
     s.run()
     assert len(s.infections) == 19
 
@@ -111,20 +111,20 @@ def test_simulate(rng, base_params):
 def test_simulate_max_infections(rng, base_params):
     params = base_params
     params["max_infections"] = 10
-    s = ringvax.Simulation(params=params, seed=rng)
+    s = ringvax.Simulation(params=params, rng=rng)
     s.run()
     assert len(s.infections) == 10
 
 
 def test_simulate_set_field(rng, base_params):
-    s = ringvax.Simulation(params=base_params, seed=rng)
+    s = ringvax.Simulation(params=base_params, rng=rng)
     id = s.create_person()
     s.update_person(id, {"generation": 0})
     assert s.get_person_property(id, "generation") == 0
 
 
 def test_simulate_error_on_bad_get_property(rng, base_params):
-    s = ringvax.Simulation(params=base_params, seed=rng)
+    s = ringvax.Simulation(params=base_params, rng=rng)
     id = s.create_person()
 
     with pytest.raises(RuntimeError, match="foo"):
@@ -132,7 +132,7 @@ def test_simulate_error_on_bad_get_property(rng, base_params):
 
 
 def test_simulate_error_on_bad_update_property(rng, base_params):
-    s = ringvax.Simulation(params=base_params, seed=rng)
+    s = ringvax.Simulation(params=base_params, rng=rng)
     id = s.create_person()
 
     with pytest.raises(RuntimeError, match="foo"):

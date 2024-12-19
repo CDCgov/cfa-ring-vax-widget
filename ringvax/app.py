@@ -3,6 +3,7 @@ from typing import List
 
 import altair as alt
 import graphviz
+import numpy.random
 import polars as pl
 import streamlit as st
 
@@ -175,16 +176,22 @@ def app():
     )
     progress_bar = st.progress(0, text=progress_text)
 
-    sims = []
+    # run simulations ---------------------------------------------------------
     tic = time.perf_counter()
+    sims = []
+
+    # initialize rngs
+    rngs = numpy.random.default_rng(seed).spawn(nsim)
+
     for i in range(nsim):
         progress_bar.progress(i / nsim, text=progress_text)
-        sim = Simulation(params=params, seed=seed + i)
+        sim = Simulation(params=params, rng=rngs[i])
         sim.run()
         sims.append(sim)
 
     progress_bar.empty()
     toc = time.perf_counter()
+    # end simulations ---------------------------------------------------------
 
     st.write(
         f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ "
