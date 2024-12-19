@@ -160,5 +160,103 @@ def test_snapshot(rng):
     assert len(s.infections) == 10
 
 
-def test_detection_history():
-    pass
+class TestResolveDetectionHistory:
+    @pytest.fixture
+    @staticmethod
+    def kwargs():
+        """Baseline keyword arguments for resolve_detection_history tests"""
+        return {
+            "potentially_passive_detected": False,
+            "potentially_active_detected": False,
+            "passive_detection_delay": 5.0,
+            "active_detection_delay": 2.0,
+            "t_exposed": 0.0,
+            "t_recovered": 10.0,
+            "t_infector_detected": None,
+        }
+
+    @staticmethod
+    def f(kwargs: dict):
+        return ringvax.Simulation.resolve_detection_history(**kwargs)
+
+    def test_baseline(self, kwargs):
+        """No potential detections"""
+        assert self.f(kwargs) == {
+            "detected": False,
+            "t_detected": None,
+            "detect_method": None,
+        }
+
+    def test_passive_only(self, kwargs):
+        """Passive detection only"""
+        kwargs["potentially_passive_detected"] = True
+        assert self.f(kwargs) == {
+            "detected": True,
+            "t_detected": 0.0 + 5.0,
+            "detect_method": "passive",
+        }
+
+    def test_passive_bad_time(self, kwargs):
+        """Passive detection after recovery"""
+        kwargs["potentially_passive_detected"] = True
+        kwargs["passive_detection_delay"] = 11.0
+        assert self.f(kwargs) == {
+            "detected": False,
+            "t_detected": None,
+            "detect_method": None,
+        }
+
+    def test_active_only(self, kwargs):
+        """Active detection only"""
+        kwargs["potentially_active_detected"] = True
+        kwargs["t_infector_detected"] = 0.0
+        assert self.f(kwargs) == {
+            "detected": True,
+            "t_detected": 0.0 + 2.0,
+            "detect_method": "active",
+        }
+
+    def test_active_bad_time(self, kwargs):
+        """Active detection after recovery"""
+        kwargs["potentially_active_detected"] = True
+        kwargs["t_infector_detected"] = 5.0
+        kwargs["active_detection_delay"] = 6.0
+        assert self.f(kwargs) == {
+            "detected": False,
+            "t_detected": None,
+            "detect_method": None,
+        }
+
+    def test_both_passive_wins(self, kwargs):
+        """Both passive and active detection, passive wins"""
+        kwargs["potentially_passive_detected"] = True
+        kwargs["potentially_active_detected"] = True
+        kwargs["t_infector_detected"] = 5.0
+        assert self.f(kwargs) == {
+            "detected": True,
+            "t_detected": 0.0 + 5.0,
+            "detect_method": "passive",
+        }
+
+    def test_both_active_wins(self, kwargs):
+        """Both passive and active detection, active wins"""
+        kwargs["potentially_passive_detected"] = True
+        kwargs["potentially_active_detected"] = True
+        kwargs["t_infector_detected"] = 1.0
+        assert self.f(kwargs) == {
+            "detected": True,
+            "t_detected": 1.0 + 2.0,
+            "detect_method": "active",
+        }
+
+    def test_both_neither(self, kwargs):
+        """Both passive and active detection, neither wins"""
+        kwargs["potentially_passive_detected"] = True
+        kwargs["potentially_active_detected"] = True
+        kwargs["t_infector_detected"] = 9.0
+        kwargs["passive_detection_delay"] = 11.0
+        assert self.f(kwargs) == {
+            "detected": False,
+            "t_detected": None,
+            "detect_method": None,
+        }
