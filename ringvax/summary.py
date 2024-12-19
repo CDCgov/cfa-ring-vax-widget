@@ -44,7 +44,7 @@ def get_all_person_properties(
         [
             _get_person_properties(sim).with_columns(simulation=sim_idx)
             for sim_idx, sim in enumerate(sims)
-            if sim.termination["criterion"] not in exclude_termination_if
+            if sim.termination not in exclude_termination_if
         ]
     )
 
