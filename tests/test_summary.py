@@ -9,7 +9,7 @@ import ringvax.summary
 
 def test_prep_for_df():
     infection = {"infection_times": np.array([0, 1, 2]), "detected": False}
-    assert ringvax.summary.prepare_for_df(infection) == {
+    assert ringvax.summary._prepare_for_df(infection) == {
         "infection_times": [0, 1, 2],
         "detected": False,
     }
