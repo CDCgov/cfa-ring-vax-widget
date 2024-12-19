@@ -71,19 +71,29 @@ class Simulation:
         passed_max_generations = False
 
         while True:
-            # Check if we need to stop the loop
+            # in each pass through this loop, we:
+            # - exit the loop if needed
+            # - pop one infection off the queue and instantiate it
+            # - potentially add that infection's infectees to the queue
             n_infections = len(self.query_people())
 
-            if len(infection_queue) == 0 and not passed_max_generations:
-                self.termination = "extinct"
-                break
-            elif len(infection_queue) == 0 and passed_max_generations:
-                self.termination = "max_generations"
+            # check if we need to stop the loop
+            if len(infection_queue) == 0:
+                # no infections left in the queue
+                # assign reason for termination
+                self.termination = (
+                    "max_generations" if passed_max_generations else "extinct"
+                )
+                # exit the loop
                 break
             elif n_infections == self.params["max_infections"]:
+                # we are at maximum number of infections
                 self.termination = "max_infections"
+                # exit the loop
                 break
             elif n_infections > self.params["max_infections"]:
+                # this loop instantiates infections one at a time. we should
+                # exactly hit the maximum and not exceed it.
                 raise RuntimeError("Maximum number of infections exceeded")
 
             # find the person who is infected next
@@ -100,12 +110,15 @@ class Simulation:
             generation = self.get_person_property(id, "generation")
             if generation == self.params["n_generations"]:
                 passed_max_generations = True
-                continue
             elif generation > self.params["n_generations"]:
+                # this loop instantiates infections one at a time. we should
+                # exactly hit the maximum generations and not exceed it.
                 raise RuntimeError("Generation count exceeded")
-
-            for t in self.get_person_property(id, "infection_times"):
-                bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
+            else:
+                # only add infectees to the queue if we are not yet at maximum
+                # number of generations
+                for t in self.get_person_property(id, "infection_times"):
+                    bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
 
     def generate_infection(
         self, id: str, t_exposed: float, infector: Optional[str]
