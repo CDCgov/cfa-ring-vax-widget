@@ -3,6 +3,7 @@ from typing import List
 
 import altair as alt
 import graphviz
+import numpy.random
 import polars as pl
 import streamlit as st
 
@@ -171,8 +172,12 @@ def app():
     sims = []
     with st.spinner("Running simulation..."):
         tic = time.perf_counter()
+
+        # initialize rngs
+        rngs = numpy.random.default_rng(seed).spawn(nsim)
+
         for i in range(nsim):
-            sims.append(Simulation(params=params, seed=seed + i))
+            sims.append(Simulation(params=params, rng=rngs[i]))
             sims[-1].run()
         toc = time.perf_counter()
 
