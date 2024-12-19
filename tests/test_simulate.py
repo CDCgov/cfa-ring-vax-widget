@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import numpy as np
 import numpy.random
 import pytest
@@ -134,3 +137,27 @@ def test_simulate_error_on_bad_update_property(rng, base_params):
 
     with pytest.raises(RuntimeError, match="foo"):
         s.update_person(id, {"foo": 0})
+
+
+def test_snapshot(rng):
+    params = {
+        "n_generations": 4,
+        "latent_duration": 1.0,
+        "infectious_duration": 5.0,
+        "infection_rate": 1.0,
+        "p_passive_detect": 0.5,
+        "passive_detection_delay": 4.0,
+        "p_active_detect": 0.5,
+        "active_detection_delay": 2.0,
+        "max_infections": 100,
+    }
+    s = ringvax.Simulation(params=params, seed=rng)
+    s.run()
+
+    for x in s.infections.values():
+        x["infection_times"] = x["infection_times"].tolist()
+
+    with open(Path("tests", "data", "snapshot.json")) as f:
+        snapshot = json.load(f)
+
+    assert s.infections == snapshot
