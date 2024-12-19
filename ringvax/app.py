@@ -77,6 +77,7 @@ def app():
     st.title("Ring vaccination")
 
     with st.sidebar:
+        st.subheader("Disease history times")
         latent_duration = st.slider(
             "Latent duration",
             min_value=0.0,
@@ -85,17 +86,67 @@ def app():
             step=0.1,
             format="%.1f days",
         )
+
+        max_infectious_duration = 10.0
+        min_infectious_duration = 0.1
+        default_infectious_duration = 3.0
+        max_r0 = 10.0
+        default_r0 = 1.5
+
         infectious_duration = st.slider(
             "Infectious duration",
-            min_value=0.0,
-            max_value=10.0,
-            value=3.0,
+            min_value=min_infectious_duration,
+            max_value=max_infectious_duration,
+            value=default_infectious_duration,
             step=0.1,
             format="%.1f days",
         )
-        infection_rate = st.slider(
-            "Infection rate", min_value=0.0, max_value=10.0, value=0.5, step=0.1
+
+        st.subheader("Infectiousness")
+        r0_control = st.segmented_control(
+            "Variable infectiousness parameter",
+            options=["R0", "infection rate"],
+            selection_mode="single",
+            default="R0",
+            help="R0 = infectious duration * infection rate. Only two of the "
+            "three parameters can be varied.",
         )
+
+        if r0_control == "R0":
+            r0 = st.slider(
+                "R0", min_value=0.0, max_value=max_r0, value=default_r0, step=0.1
+            )
+
+            infection_rate = st.slider(
+                "Infection rate (mean infections per day)",
+                min_value=0.0,
+                max_value=max_r0 / min_infectious_duration,
+                value=r0 / infectious_duration,
+                step=0.1,
+                disabled=True,
+            )
+
+        elif r0_control == "infection rate":
+            infection_rate = st.slider(
+                "Infection rate (mean infections per day)",
+                min_value=0.0,
+                max_value=max_r0 / max_infectious_duration,
+                value=default_r0 / default_infectious_duration,
+                step=0.1,
+            )
+
+            r0 = st.slider(
+                "R0",
+                min_value=0.0,
+                max_value=max_r0,
+                value=infectious_duration * infection_rate,
+                step=0.1,
+                disabled=True,
+            )
+        else:
+            raise RuntimeError(f"Unexpected control value: {r0_control=}")
+
+        st.subheader("Detection")
         p_passive_detect = (
             st.slider(
                 "Passive detection probability",
