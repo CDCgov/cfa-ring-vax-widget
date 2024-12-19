@@ -192,9 +192,7 @@ def app():
         "average duration of infection and the infectious rate)."
     )
 
-    n_at_max = sum(
-        1 for sim in sims if sim.termination["criterion"] == "max_infections"
-    )
+    n_at_max = sum(1 for sim in sims if sim.termination == "max_infections")
 
     show = True if n_at_max == 0 else False
     if not show:

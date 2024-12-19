@@ -56,7 +56,7 @@ def get_all_person_properties(
 
     per_sim = []
     for idx, sim in enumerate(sims):
-        if sim.termination["criterion"] not in exclude_termination_if:
+        if sim.termination not in exclude_termination_if:
             sims_dict = {k: [] for k in infection_schema.keys()} | {
                 "simulation": [idx] * len(sim.infections)
             }
