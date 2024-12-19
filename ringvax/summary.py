@@ -22,7 +22,7 @@ infection_schema = {
 An infection as a polars schema
 """
 
-assert set(infection_schema.keys()) == set(Simulation.PROPERTIES)
+assert set(infection_schema.keys()) == Simulation.PROPERTIES
 
 
 def prepare_for_df(infection: dict) -> dict:

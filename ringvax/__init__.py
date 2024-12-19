@@ -6,7 +6,7 @@ import numpy.random
 
 
 class Simulation:
-    PROPERTIES = [
+    PROPERTIES = {
         "infector",
         "generation",
         "t_exposed",
@@ -17,7 +17,7 @@ class Simulation:
         "detect_method",
         "t_detected",
         "infection_times",
-    ]
+    }
 
     def __init__(self, params: dict[str, Any], seed: Optional[int] = None):
         self.params = params
