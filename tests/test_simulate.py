@@ -151,7 +151,7 @@ def test_snapshot(rng):
         "active_detection_delay": 2.0,
         "max_infections": 100,
     }
-    s = ringvax.Simulation(params=params, seed=rng)
+    s = ringvax.Simulation(params=params, rng=rng)
     s.run()
 
     for x in s.infections.values():
