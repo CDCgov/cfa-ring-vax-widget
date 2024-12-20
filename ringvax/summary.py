@@ -26,6 +26,17 @@ An infection as a polars schema
 assert set(infection_schema.keys()) == Simulation.PROPERTIES
 
 
+def frac(num, denom) -> float:
+    if denom == 0.0:
+        if num == 0.0:
+            return float("nan")
+        elif num > 0.0:
+            return float("inf")
+        else:
+            return float("-inf")
+    return num / denom
+
+
 def get_all_person_properties(
     sims: Sequence[Simulation], exclude_termination_if: list[str] = ["max_infections"]
 ) -> pl.DataFrame:
@@ -93,15 +104,15 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
 
     return pl.DataFrame(
         {
-            "prob_detect": 1.0 - count_nodetect / n_infections,
-            "prob_active": count_active / n_active_eligible
-            if n_active_eligible > 0
-            else None,
-            "prob_passive": count_passive / n_infections,
-            "prob_detect_before_infectious": df.filter(pl.col("detected"))
-            .filter(pl.col("t_detected") < pl.col("t_infectious"))
-            .shape[0]
-            / n_infections,
+            "prob_detect": 1.0 - frac(count_nodetect, n_infections),
+            "prob_active": frac(count_active, n_active_eligible),
+            "prob_passive": frac(count_passive, n_infections),
+            "prob_detect_before_infectious": frac(
+                df.filter(pl.col("detected"))
+                .filter(pl.col("t_detected") < pl.col("t_infectious"))
+                .shape[0],
+                n_infections,
+            ),
         }
     )
 
