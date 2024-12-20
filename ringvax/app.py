@@ -17,6 +17,20 @@ from ringvax.summary import (
 )
 
 
+def render_percents(df: pl.DataFrame) -> pl.DataFrame:
+    return df.with_columns(
+        pl.when(pl.col(col).is_nan())
+        .then(pl.lit("Not a number"))
+        .otherwise(
+            pl.col(col).map_elements(
+                lambda x: f"{round(x):.0f}%", return_dtype=pl.String
+            )
+        )
+        .alias(col)
+        for col in df.columns
+    )
+
+
 def make_graph(sim: Simulation) -> graphviz.Digraph:
     """Make a transmission graph"""
     graph = graphviz.Digraph()
@@ -268,19 +282,11 @@ def app():
             )
 
             st.write(
-                "The following table provides summaries of marginal probabilities regarding detection. Aside from the marginal probability of active detection, these are the observed probabilities that any individual is detected in this manner. The marginal probability of active detection excludes index cases, which are not eligible for active detection."
+                "The following table provides summaries of marginal probabilities regarding detection. Aside from the marginal probability of active detection, these are the observed probabilities that any individual is detected in this manner. The marginal probability of active detection excludes index cases, which are not eligible for active detection, including the index case."
             )
             detection = summarize_detections(sim_df)
             st.dataframe(
-                detection.select(
-                    (pl.col(col) * 100).round(0).cast(pl.Int64)
-                    for col in detection.columns
-                )
-                .with_columns(
-                    pl.concat_str([pl.col(col), pl.lit("%")], separator="")
-                    for col in detection.columns
-                )
-                .rename(
+                render_percents(detection).rename(
                     {
                         "prob_detect": "Any detection",
                         "prob_active": "Active detection",
