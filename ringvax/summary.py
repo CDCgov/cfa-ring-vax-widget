@@ -94,7 +94,9 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     return pl.DataFrame(
         {
             "prob_detect": 1.0 - count_nodetect / n_infections,
-            "prob_active": count_active / n_active_eligible,
+            "prob_active": count_active / n_active_eligible
+            if n_active_eligible > 0
+            else None,
             "prob_passive": count_passive / n_infections,
             "prob_detect_before_infectious": df.filter(pl.col("detected"))
             .filter(pl.col("t_detected") < pl.col("t_infectious"))
