@@ -3,6 +3,7 @@ from typing import List
 
 import altair as alt
 import graphviz
+import numpy as np
 import numpy.random
 import polars as pl
 import streamlit as st
@@ -73,10 +74,16 @@ def format_duration(x: float, digits=3) -> str:
         return f"{round(x, digits)} seconds"
 
 
+def set_session_default(key, value) -> None:
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
 def app():
     st.title("Ring vaccination")
 
     with st.sidebar:
+        st.subheader("Disease history times")
         latent_duration = st.slider(
             "Latent duration",
             min_value=0.0,
@@ -85,17 +92,74 @@ def app():
             step=0.1,
             format="%.1f days",
         )
+
+        default_infectious_duration = 3.0
+        max_infectious_duration = 10.0
+        min_infectious_duration = 0.1
+
+        default_R0 = 1.5
+        max_R0 = 10.0
+        set_session_default("R0", default_R0)
+        set_session_default("infection_rate", default_R0 / default_infectious_duration)
+
         infectious_duration = st.slider(
             "Infectious duration",
-            min_value=0.0,
-            max_value=10.0,
-            value=3.0,
+            min_value=min_infectious_duration,
+            max_value=max_infectious_duration,
+            value=default_infectious_duration,
             step=0.1,
             format="%.1f days",
         )
-        infection_rate = st.slider(
-            "Infection rate", min_value=0.0, max_value=10.0, value=0.5, step=0.1
+
+        st.subheader("Infectiousness")
+        infectiousness_control = st.segmented_control(
+            "Variable infectiousness parameter",
+            options=["R0", "rate"],
+            selection_mode="single",
+            default="R0",
+            help="R0 = infectious duration * infection rate. Only two of the "
+            "three parameters can be varied.",
         )
+
+        def callback_R0():
+            st.session_state["infection_rate"] = (
+                st.session_state["R0"] / infectious_duration
+            )
+
+        def callback_rate():
+            st.session_state["R0"] = (
+                st.session_state["infection_rate"] * infectious_duration
+            )
+
+        R0 = st.slider(
+            "R0",
+            key="R0",
+            min_value=0.0,
+            max_value=max_R0,
+            step=0.1,
+            disabled=infectiousness_control != "R0",
+            on_change=callback_R0,
+        )
+
+        infection_rate = st.slider(
+            "Infection rate (mean infections per day)",
+            key="infection_rate",
+            min_value=0.0,
+            max_value=max_R0 / min_infectious_duration,
+            step=0.1,
+            disabled=infectiousness_control != "rate",
+            on_change=callback_rate,
+        )
+
+        # double check that R0, rate, and duration are not in conflict
+        assert np.isclose(R0, infection_rate * infectious_duration)
+
+        # rather than trying to dynamically adjust the ranges on the sliders,
+        # issue a warning if the selected rate leads to an out-of-range R0
+        if R0 > max_R0:
+            st.warning(f"Selected infectious rate yields R0 > {max_R0}")
+
+        st.subheader("Detection")
         p_passive_detect = (
             st.slider(
                 "Passive detection probability",
@@ -193,11 +257,7 @@ def app():
     toc = time.perf_counter()
     # end simulations ---------------------------------------------------------
 
-    st.write(
-        f"Ran {nsim} simulations in {format_duration(toc - tic)} with an $R_0$ "
-        f"of {infectious_duration * infection_rate:.2f} (the product of the "
-        "average duration of infection and the infectious rate)."
-    )
+    st.write(f"Ran {nsim} simulations in {format_duration(toc - tic)}")
 
     n_at_max = sum(1 for sim in sims if sim.termination == "max_infections")
 
