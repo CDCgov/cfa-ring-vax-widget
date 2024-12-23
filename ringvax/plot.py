@@ -51,7 +51,6 @@ def mark_detection(ax, id, sim: Simulation, plot_par):
     """
     If this infection was detected, mark that.
     """
-    infection = sim.infections[id]
     if sim.get_person_property(id, "detected"):
         y_loc = plot_par["height"][id]
         x_loc = sim.get_person_property(id, "t_detected")
@@ -67,17 +66,22 @@ def mark_detection(ax, id, sim: Simulation, plot_par):
             plot_par["history_thickness"],
             plot_par["ppl"],
         )
-        ax.fill(x, y, color=plot_par["color"]["detection"][infection["detect_method"]])
+        ax.fill(
+            x,
+            y,
+            color=plot_par["color"]["detection"][
+                sim.get_person_property(id, "detect_method")
+            ],
+        )
 
 
 def mark_infections(ax, id, sim: Simulation, plot_par):
     """
     Put down tick marks at every time a new infection arises caused by given infection.
     """
-    infection = sim.infections[id]
     y_loc = plot_par["height"][id]
-    if infection["infection_times"].size > 0:
-        for t in infection["infection_times"]:
+    if (sim.get_person_property(id, "infection_times")).size > 0:
+        for t in sim.get_person_property(id, "infection_times"):
             y = np.linspace(
                 y_loc - plot_par["history_thickness"] / 2.0,
                 y_loc + plot_par["history_thickness"] / 2.0,
@@ -91,11 +95,10 @@ def draw_stages(ax, id, sim: Simulation, plot_par):
     """
     Draw the stages (latent, infectious) of this infection
     """
-    infection = sim.infections[id]
     y_loc = plot_par["height"][id]
     for stage in ["latent", "infectious"]:
         x = np.linspace(
-            infection[stage_map[stage]["start"]],
+            sim.get_person_property(id, stage_map[stage]["start"]),
             get_end(id, sim, stage, stage_map),
             plot_par["ppl"],
         )
