@@ -7,7 +7,9 @@ import numpy.random
 
 class Simulation:
     PROPERTIES = {
+        "id",
         "infector",
+        "infectees",
         "generation",
         "t_exposed",
         "t_infectious",
@@ -62,6 +64,13 @@ class Simulation:
                 for id, person in self.infections.items()
                 if all(person[k] == v for k, v in query.items())
             ]
+
+    def register_infectee(self, infector, infectee) -> None:
+        infectees = self.get_person_property(infector, "infectees")
+        if infectees is None:
+            self.update_person(infector, {"infectees": []})
+            infectees = self.get_person_property(infector, "infectees")
+        infectees.append(infectee)
 
     def run(self) -> None:
         """Run simulation"""
@@ -133,8 +142,11 @@ class Simulation:
             generation = 0
         else:
             generation = self.get_person_property(infector, "generation") + 1
+            self.register_infectee(infector, id)
 
-        self.update_person(id, {"infector": infector, "generation": generation})
+        self.update_person(
+            id, {"id": id, "infector": infector, "generation": generation}
+        )
 
         # disease state history in this individual
         disease_history = self.generate_disease_history(t_exposed=t_exposed)
@@ -155,7 +167,9 @@ class Simulation:
         if disease_history["t_infectious"] > t_end_infectious:
             infection_times = np.array([])
         else:
-            infection_times = self.generate_infection_times(
+            infection_times = disease_history[
+                "t_infectious"
+            ] + self.generate_infection_times(
                 self.rng,
                 rate=infection_rate,
                 infectious_duration=(
