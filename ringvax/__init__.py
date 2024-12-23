@@ -156,6 +156,7 @@ class Simulation:
         detection_history = self.generate_detection_history(id)
         self.update_person(id, detection_history)
 
+        t_start_infectious = disease_history["t_infectious"]
         if detection_history["detected"]:
             t_end_infectious = detection_history["t_detected"]
         else:
@@ -167,14 +168,17 @@ class Simulation:
         if disease_history["t_infectious"] > t_end_infectious:
             infection_times = np.array([])
         else:
-            infection_times = disease_history[
-                "t_infectious"
-            ] + self.generate_infection_times(
+            infection_times = self.generate_infection_times(
                 self.rng,
                 rate=infection_rate,
                 infectious_duration=(
                     t_end_infectious - disease_history["t_infectious"]
                 ),
+                t_infectious=t_start_infectious,
+            )
+            assert all(
+                (it >= t_start_infectious) and (it <= t_end_infectious)
+                for it in infection_times
             )
 
         self.update_person(id, {"infection_times": infection_times})
@@ -257,7 +261,10 @@ class Simulation:
 
     @staticmethod
     def generate_infection_times(
-        rng: numpy.random.Generator, rate: float, infectious_duration: float
+        rng: numpy.random.Generator,
+        rate: float,
+        infectious_duration: float,
+        t_infectious: float,
     ) -> np.ndarray:
         """Times from onset of infectiousness to each infection"""
         assert rate >= 0.0
@@ -269,7 +276,7 @@ class Simulation:
         n_events = rng.poisson(infectious_duration * rate)
 
         # We sort these elsewhere, no need to do extra work
-        return rng.uniform(0.0, infectious_duration, n_events)
+        return t_infectious + rng.uniform(0.0, infectious_duration, n_events)
 
     def bernoulli(self, p: float) -> bool:
         return self.rng.binomial(n=1, p=p) == 1
