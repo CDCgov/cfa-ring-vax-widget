@@ -1,0 +1,50 @@
+schemaVersion: 2.2.0
+metadata:
+  name: cfa-ring-vax-widget-app
+  version: 3.0.0
+  displayName: Python Runtime
+  description: Stack with python
+  projectType: "Python"
+  language: "python"
+  attributes:
+    alpha.dockerimage-port: 8501
+  provider: Red Hat
+  supportUrl: https://github.com/devfile-samples/devfile-support#support-information
+parent:
+  id: python
+  registryUrl: "https://registry.devfile.io"
+components:
+  - name: image-build
+    image:
+      imageName: python:3.13-slim:latest
+      dockerfile:
+        uri: Dockerfile
+        buildContext: .
+        rootRequired: false
+  - name: kubernetes-deploy
+    attributes:
+      deployment/replicas: 1
+      deployment/cpuRequest: 250m
+      deployment/memoryRequest: 1000Mi
+      deployment/container-port: 8501
+    kubernetes:
+      uri: deploy.yaml
+      endpoints:
+        - name: http-8501
+          targetPort: 8501
+          path: /
+commands:
+  - id: build-image
+    apply:
+      component: image-build
+  - id: deployk8s
+    apply:
+      component: kubernetes-deploy
+  - id: deploy
+    composite:
+      commands:
+        - build-image
+        - deployk8s
+      group:
+        kind: deploy
+        isDefault: true
