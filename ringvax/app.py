@@ -2,12 +2,12 @@ import time
 from typing import List
 
 import altair as alt
-import graphviz
 import numpy.random
 import polars as pl
 import streamlit as st
 
 from ringvax import Simulation
+from ringvax.plot import plot_simulation
 from ringvax.summary import (
     get_all_person_properties,
     get_total_infection_count_df,
@@ -15,24 +15,6 @@ from ringvax.summary import (
     summarize_detections,
     summarize_infections,
 )
-
-
-def make_graph(sim: Simulation) -> graphviz.Digraph:
-    """Make a transmission graph"""
-    graph = graphviz.Digraph()
-    for infectee in sim.query_people():
-        infector = sim.get_person_property(infectee, "infector")
-
-        color = (
-            "black" if not sim.get_person_property(infectee, "detected") else "#068482"
-        )
-
-        graph.node(str(infectee), color=color)
-
-        if infector is not None:
-            graph.edge(str(infector), str(infectee))
-
-    return graph
 
 
 @st.fragment
@@ -49,7 +31,7 @@ def show_graph(sims: List[Simulation], pause: float = 0.1):
     )
     placeholder = st.empty()
     time.sleep(pause)
-    placeholder.graphviz_chart(make_graph(sims[idx]))
+    placeholder.pyplot(plot_simulation(sims[idx]))
 
 
 def format_control_gens(gen: int):
