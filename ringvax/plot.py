@@ -25,7 +25,30 @@ def diamond(xc, yc, width, height, ppl):
             *reversed(half_down_y[1:]),
             *half_down_y,
         ]
+    )
+
+    return (
+        x,
+        y,
+    )
+
+
+def half_hourglass(upper, xc, yc, width, height, ppl):
+    k = 1.0 if upper else -1.0
+    x = np.array(
+        [
+            *(np.linspace(xc, xc + width / 2.0, ppl).tolist())[:-1],
+            *(np.linspace(xc + width / 2.0, xc - width / 2.0, ppl).tolist())[:-1],
+            *(np.linspace(xc - width / 2.0, xc, ppl).tolist())[:-1],
+        ]
     )  # type: ignore
+    y = np.array(
+        [
+            *(np.linspace(yc, yc + k * height / 2.0, ppl).tolist()[:-1]),
+            *([yc + k * height / 2.0] * (ppl - 1)),
+            *(np.linspace(yc + k * height / 2.0, yc, ppl).tolist()[:-1]),
+        ]
+    )
 
     return (
         x,
@@ -59,20 +82,49 @@ def mark_detection(ax, id, sim: Simulation, plot_par):
             * (max(plot_par["x_range"]) - min(plot_par["x_range"]))
             / (max(plot_par["y_range"]) - min(plot_par["y_range"]))
         )
-        x, y = diamond(
-            x_loc,
-            y_loc,
-            plot_par["history_thickness"] * x_adj,
-            plot_par["history_thickness"],
-            plot_par["ppl"],
-        )
-        ax.fill(
-            x,
-            y,
-            color=plot_par["color"]["detection"][
-                sim.get_person_property(id, "detect_method")
-            ],
-        )
+        dtype = sim.get_person_property(id, "detect_method")
+        if dtype == "active":
+            x, y = diamond(
+                x_loc,
+                y_loc,
+                plot_par["history_thickness"] * x_adj,
+                plot_par["history_thickness"],
+                plot_par["ppl"],
+            )
+            ax.fill(
+                x,
+                y,
+                color=plot_par["color"]["detection"],
+            )
+        elif dtype == "passive":
+            x, y = half_hourglass(
+                True,
+                x_loc,
+                y_loc,
+                plot_par["history_thickness"] * x_adj,
+                plot_par["history_thickness"],
+                plot_par["ppl"],
+            )
+            ax.fill(
+                x,
+                y,
+                color=plot_par["color"]["detection"],
+            )
+            x, y = half_hourglass(
+                False,
+                x_loc,
+                y_loc,
+                plot_par["history_thickness"] * x_adj,
+                plot_par["history_thickness"],
+                plot_par["ppl"],
+            )
+            ax.fill(
+                x,
+                y,
+                color=plot_par["color"]["detection"],
+            )
+        else:
+            raise RuntimeError("Unknown detection type {dtype}")
 
 
 def mark_infections(ax, id, sim: Simulation, plot_par):
@@ -177,14 +229,11 @@ def make_plot_par(sim: Simulation):
 
     return {
         "color": {
-            "latent": "#888888",
-            "infectious": "#c7dcdd",
+            "latent": "#c7dcdd90",
+            "infectious": "#cf482890",
             "infection": "#888888",
             "connection": "#888888",
-            "detection": {
-                "active": "#f78f47",
-                "passive": "#068482",
-            },
+            "detection": "#20419a",
         },
         "history_thickness": 0.5,
         "linewidth": {
