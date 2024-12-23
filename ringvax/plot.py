@@ -182,8 +182,8 @@ def make_plot_par(sim: Simulation):
             "infection": "#888888",
             "connection": "#888888",
             "detection": {
-                "active": "#068482",
-                "passive": "#f78f47",
+                "active": "#f78f47",
+                "passive": "#068482",
             },
         },
         "history_thickness": 0.5,
@@ -221,4 +221,5 @@ def plot_simulation(sim: Simulation):
 
         connect_child_infections(ax, inf, sim, plot_par)
 
+    ax.set_axis_off()
     return fig
