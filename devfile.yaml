@@ -1,7 +1,7 @@
 schemaVersion: 2.2.0
 metadata:
   name: cfa-ring-vax-widget-app
-  version: 3.0.0
+  version: 0.1.0
   displayName: Python Runtime
   description: Stack with python
   projectType: "Python"
