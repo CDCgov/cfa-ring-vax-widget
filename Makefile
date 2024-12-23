@@ -4,7 +4,7 @@ TARGET = ringvax
 .PHONY: run build_container run_container
 
 run:
-	streamlit run ringvax/apy.py
+	streamlit run ringvax/app.py
 
 build_container:
 	$(ENGINE) build -t $(TARGET) -f Dockerfile
