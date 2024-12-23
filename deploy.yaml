@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cfa-ring-vax-widget
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cfa-ring-vax-widget-app
+  template:
+    metadata:
+      labels:
+        app: cfa-ring-vax-widget-app
+    spec:
+      containers:
+        - name: cfa-ring-vax-widget-app
+          image: python:3.13-slim:latest
+          ports:
+            - name: http
+              containerPort: 8501
+              protocol: TCP
+          resources:
+            requests:
+              memory: "1000Mi"
+              cpu: "250m"
+            limits:
+              memory: "2000Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cfa-ring-vax-widget-service
+spec:
+  selector:
+    app: cfa-ring-vax-widget-app
+  ports:
+    - protocol: TCP
+      port: 8501
+      targetPort: 8501
