@@ -7,6 +7,7 @@ from ringvax import Simulation
 
 infection_schema = pl.Schema(
     {
+        "id": pl.String,
         "infector": pl.String,
         "infectees": pl.List(pl.String),
         "generation": pl.Int64,
