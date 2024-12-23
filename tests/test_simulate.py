@@ -17,7 +17,7 @@ def test_infection_delays_zero_rate(rng):
     """If zero rate, zero infections"""
     assert (
         list(
-            ringvax.Simulation.generate_infection_times(
+            ringvax.Simulation.generate_infection_waiting_times(
                 rng, rate=0.0, infectious_duration=100.0
             )
         )
@@ -29,7 +29,7 @@ def test_infection_delays_zero_duration(rng):
     """If zero duration, zero infections"""
     assert (
         list(
-            ringvax.Simulation.generate_infection_times(
+            ringvax.Simulation.generate_infection_waiting_times(
                 rng, rate=100.0, infectious_duration=0.0
             )
         )
@@ -41,7 +41,7 @@ def test_infection_delays(rng):
     duration = 5.0
 
     times = np.array(
-        ringvax.Simulation.generate_infection_times(
+        ringvax.Simulation.generate_infection_waiting_times(
             rng=rng, rate=0.5, infectious_duration=duration
         )
     )
@@ -105,7 +105,7 @@ def base_params():
 def test_simulate(rng, base_params):
     s = ringvax.Simulation(params=base_params, rng=rng)
     s.run()
-    assert len(s.infections) == 19
+    assert len(s.infections) == 29
 
 
 def test_simulate_max_infections(rng, base_params):

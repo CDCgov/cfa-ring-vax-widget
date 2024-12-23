@@ -7,7 +7,9 @@ import numpy.random
 
 class Simulation:
     PROPERTIES = {
+        "id",
         "infector",
+        "infectees",
         "generation",
         "t_exposed",
         "t_infectious",
@@ -62,6 +64,13 @@ class Simulation:
                 for id, person in self.infections.items()
                 if all(person[k] == v for k, v in query.items())
             ]
+
+    def register_infectee(self, infector, infectee) -> None:
+        infectees = self.get_person_property(infector, "infectees")
+        if infectees is None:
+            self.update_person(infector, {"infectees": []})
+            infectees = self.get_person_property(infector, "infectees")
+        infectees.append(infectee)
 
     def run(self) -> None:
         """Run simulation"""
@@ -133,8 +142,11 @@ class Simulation:
             generation = 0
         else:
             generation = self.get_person_property(infector, "generation") + 1
+            self.register_infectee(infector, id)
 
-        self.update_person(id, {"infector": infector, "generation": generation})
+        self.update_person(
+            id, {"id": id, "infector": infector, "generation": generation}
+        )
 
         # disease state history in this individual
         disease_history = self.generate_disease_history(t_exposed=t_exposed)
@@ -144,6 +156,7 @@ class Simulation:
         detection_history = self.generate_detection_history(id)
         self.update_person(id, detection_history)
 
+        t_start_infectious = disease_history["t_infectious"]
         if detection_history["detected"]:
             t_end_infectious = detection_history["t_detected"]
         else:
@@ -155,13 +168,18 @@ class Simulation:
         if disease_history["t_infectious"] > t_end_infectious:
             infection_times = np.array([])
         else:
-            infection_times = self.generate_infection_times(
-                self.rng,
-                rate=infection_rate,
-                infectious_duration=(
-                    t_end_infectious - disease_history["t_infectious"]
-                ),
+            infection_times = (
+                t_start_infectious
+                + self.generate_infection_waiting_times(
+                    self.rng,
+                    rate=infection_rate,
+                    infectious_duration=(
+                        t_end_infectious - disease_history["t_infectious"]
+                    ),
+                )
             )
+            assert (infection_times >= t_start_infectious).all()
+            assert (infection_times <= t_end_infectious).all()
 
         self.update_person(id, {"infection_times": infection_times})
 
@@ -242,8 +260,10 @@ class Simulation:
         return self.params["active_detection_delay"]
 
     @staticmethod
-    def generate_infection_times(
-        rng: numpy.random.Generator, rate: float, infectious_duration: float
+    def generate_infection_waiting_times(
+        rng: numpy.random.Generator,
+        rate: float,
+        infectious_duration: float,
     ) -> np.ndarray:
         """Times from onset of infectiousness to each infection"""
         assert rate >= 0.0
@@ -254,7 +274,7 @@ class Simulation:
 
         n_events = rng.poisson(infectious_duration * rate)
 
-        # We sort these elsewhere, no need to do extra work
+        # We sort these elsewhere
         return rng.uniform(0.0, infectious_duration, n_events)
 
     def bernoulli(self, p: float) -> bool:

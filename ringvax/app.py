@@ -2,13 +2,13 @@ import time
 from typing import List
 
 import altair as alt
-import graphviz
 import numpy as np
 import numpy.random
 import polars as pl
 import streamlit as st
 
 from ringvax import Simulation
+from ringvax.plot import plot_simulation
 from ringvax.summary import (
     get_all_person_properties,
     get_total_infection_count_df,
@@ -31,27 +31,8 @@ def render_percents(df: pl.DataFrame) -> pl.DataFrame:
         for col in df.columns
     )
 
-
-def make_graph(sim: Simulation) -> graphviz.Digraph:
-    """Make a transmission graph"""
-    graph = graphviz.Digraph()
-    for infectee in sim.query_people():
-        infector = sim.get_person_property(infectee, "infector")
-
-        color = (
-            "black" if not sim.get_person_property(infectee, "detected") else "#068482"
-        )
-
-        graph.node(str(infectee), color=color)
-
-        if infector is not None:
-            graph.edge(str(infector), str(infectee))
-
-    return graph
-
-
 @st.fragment
-def show_graph(sims: List[Simulation], pause: float = 0.1):
+def show_graph(sims: List[Simulation], annotate_generation: bool, pause: float = 0.1):
     """Show a transmission graph. Wrap as st.fragment, to not re-run simulations.
 
     Args:
@@ -64,7 +45,9 @@ def show_graph(sims: List[Simulation], pause: float = 0.1):
     )
     placeholder = st.empty()
     time.sleep(pause)
-    placeholder.graphviz_chart(make_graph(sims[idx]))
+    placeholder.pyplot(
+        plot_simulation(sims[idx], {"annotate_generation": annotate_generation})
+    )
 
 
 def format_control_gens(gen: int):
@@ -246,6 +229,7 @@ def app():
             )
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
+            plot_gen = st.button("Show infection's generation?")
 
     params = {
         "n_generations": n_generations,
@@ -376,7 +360,7 @@ def app():
 
         with tab2:
             st.header("Graph of infections")
-            show_graph(sims=sims)
+            show_graph(sims=sims, annotate_generation=plot_gen)
 
 
 if __name__ == "__main__":
