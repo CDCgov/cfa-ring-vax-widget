@@ -282,7 +282,13 @@ def app():
             )
 
             st.write(
-                "The following table provides summaries of marginal probabilities regarding detection. Aside from the marginal probability of active detection, these are the observed probabilities that any individual is detected in this manner. The marginal probability of active detection excludes index cases, which are not eligible for active detection, including the index case."
+                (
+                    "The following table provides summaries of marginal probabilities regarding detection. "
+                    "Aside from the marginal probability of active detection, these are the observed "
+                    "probabilities that any individual is detected in this manner, including the index case. "
+                    "The marginal probability of active detection excludes index cases, which are not "
+                    "eligible for active detection."
+                )
             )
             detection = summarize_detections(sim_df)
             st.dataframe(
