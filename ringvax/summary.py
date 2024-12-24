@@ -26,17 +26,6 @@ An infection as a polars schema
 assert set(infection_schema.keys()) == Simulation.PROPERTIES
 
 
-def frac(num, denom) -> float:
-    if denom == 0.0:
-        if num == 0.0:
-            return float("nan")
-        elif num > 0.0:
-            return float("inf")
-        else:
-            return float("-inf")
-    return num / denom
-
-
 def get_all_person_properties(
     sims: Sequence[Simulation], exclude_termination_if: list[str] = ["max_infections"]
 ) -> pl.DataFrame:
@@ -76,6 +65,7 @@ def _prepare_for_df(infection: dict) -> dict:
     }
 
 
+@np.errstate(invalid="ignore")
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get marginal detection probabilities from simulations.
@@ -104,10 +94,10 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
 
     return pl.DataFrame(
         {
-            "prob_detect": 1.0 - frac(count_nodetect, n_infections),
-            "prob_active": frac(count_active, n_active_eligible),
-            "prob_passive": frac(count_passive, n_infections),
-            "prob_detect_before_infectious": frac(
+            "prob_detect": 1.0 - np.divide(count_nodetect, n_infections),
+            "prob_active": np.divide(count_active, n_active_eligible),
+            "prob_passive": np.divide(count_passive, n_infections),
+            "prob_detect_before_infectious": np.divide(
                 df.filter(pl.col("detected"))
                 .filter(pl.col("t_detected") < pl.col("t_infectious"))
                 .shape[0],
