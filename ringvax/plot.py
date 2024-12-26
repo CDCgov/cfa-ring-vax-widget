@@ -1,5 +1,9 @@
+from typing import List, Optional
+
+import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
+import polars as pl
 
 from ringvax import Simulation
 
@@ -145,7 +149,7 @@ def get_infection_time_tuples(id: str, sim: Simulation):
     return [(sim.get_person_property(inf, "t_exposed"), inf) for inf in infectees]
 
 
-def order_descendants(sim: Simulation):
+def order_descendants(sim: Simulation) -> List[str]:
     """
     Get infections in order for plotting such that the tree has no crossing lines.
 
@@ -157,7 +161,7 @@ def order_descendants(sim: Simulation):
     return order
 
 
-def _order_descendants(id: str, sim: Simulation, order: list[str]):
+def _order_descendants(id: str, sim: Simulation, order: list[str]) -> None:
     """
     Add this infections descendants in order
     """
@@ -223,3 +227,123 @@ def plot_simulation(sim: Simulation):
 
     ax.set_axis_off()
     return fig
+
+
+def get_person_data(sim: Simulation, id: str, plot_order) -> dict:
+    """Get disease courses for one person in the simulation
+
+    Args:
+        sim (Simulation): simulation
+        id (str): person ID
+        plot_order (dict): Mapping from IDs to plot order
+
+    Returns:
+        dict: Keys include `y` (plot order), natural history times
+            and facts, and `t_end_infectious`, which is the minimum
+            of t_recovered and t_detected (if detected)
+    """
+    x = {"y": plot_order[id]}
+    x |= {
+        prop: sim.get_person_property(id, prop)
+        for prop in [
+            "t_exposed",
+            "t_infectious",
+            "t_recovered",
+            "t_detected",
+            "detect_method",
+            "detected",
+        ]
+    }
+
+    x["t_end_infectious"] = (
+        x["t_recovered"]
+        if not x["detected"]
+        else min(x["t_recovered"], x["t_detected"])
+    )
+
+    return x
+
+
+def get_transmission_data(sim: Simulation, plot_order) -> Optional[pl.DataFrame]:
+    """Get transmission data
+
+    Args:
+        sim (Simulation): Simulation
+        plot_order (dict): Mapping from simulation person IDs to plot order
+
+    Returns:
+        Optional[pl.DataFrame]: Either None (if no transmission), or columns
+            `y` (infector), `y2` (infectee), `t` (time)
+    """
+    x = []
+
+    for infector in sim.query_people():
+        infectees = sim.get_person_property(infector, "infectees")
+
+        if infectees is not None:
+            for infectee in infectees:
+                x.append(
+                    {
+                        "y": plot_order[infector],
+                        "y2": plot_order[infectee],
+                        "t": sim.get_person_property(infectee, "t_exposed"),
+                    }
+                )
+
+    if len(x) == 0:
+        return None
+    else:
+        return pl.from_dicts(x)
+
+
+def plot_simulation2(sim: Simulation) -> alt.LayerChart:
+    latent_color = "gray"
+    infectious_color = "red"
+
+    plot_order = order_descendants(sim)
+    # kludge: Get a mapping from IDs to plot order, then rework the data inputs so there's
+    # no need to sort at the level fo the actual plot
+    plot_order = {id: plot_order.index(id) for id in plot_order}
+
+    person_data = pl.from_dicts(
+        [get_person_data(sim, id, plot_order) for id in sim.query_people()]
+    )
+    detect_data = person_data.filter(pl.col("detected"))
+
+    person_base = alt.Chart(person_data)
+    chart = (
+        person_base.mark_rule(color=latent_color).encode(
+            x="t_exposed", x2="t_infectious", y="y:N", y2="y:N"
+        )
+        + person_base.mark_rule(color=infectious_color).encode(
+            x="t_infectious", x2="t_end_infectious", y="y:N", y2="y:N"
+        )
+        + person_base.mark_point(color=latent_color).encode(x="t_exposed", y="y:N")
+        + person_base.mark_point(color=latent_color).encode(x="t_infectious", y="y:N")
+        + person_base.mark_point(color=latent_color).encode(
+            x="t_end_infectious", y="y:N"
+        )
+    )
+
+    # only add detection layer if anyone was detected
+    if detect_data.shape[0] > 0:
+        chart += (
+            alt.Chart(detect_data)
+            .mark_point()
+            .encode(x="t_detected", y="y:N", color="detect_method:N")
+        )
+
+    # # add transmission layer only if there were transmissions
+    transmission_data = get_transmission_data(sim, plot_order)
+
+    if transmission_data is not None:
+        chart += (
+            alt.Chart(transmission_data)
+            .mark_rule(color=infectious_color, strokeDash=[4, 4])
+            .encode(x="t", x2="t", y="y:N", y2="y2:N")
+        )
+
+    chart.layer[0].encoding.y.title = "Person ID"
+    chart.layer[0].encoding.x.title = "time"
+
+    return chart

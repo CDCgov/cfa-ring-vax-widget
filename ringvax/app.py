@@ -7,7 +7,7 @@ import polars as pl
 import streamlit as st
 
 from ringvax import Simulation
-from ringvax.plot import plot_simulation
+from ringvax.plot import plot_simulation, plot_simulation2
 from ringvax.summary import (
     get_all_person_properties,
     get_total_infection_count_df,
@@ -29,8 +29,10 @@ def show_graph(sims: List[Simulation], pause: float = 0.1):
     idx = st.number_input(
         "Simulation to plot", min_value=0, max_value=len(sims) - 1, value=0
     )
+    st.altair_chart(plot_simulation2(sims[idx]))
     placeholder = st.empty()
     time.sleep(pause)
+
     placeholder.pyplot(plot_simulation(sims[idx]))
 
 
