@@ -102,34 +102,46 @@ def app():
         set_session_default("R0", default_R0)
         set_session_default("infection_rate", default_R0 / default_infectious_duration)
 
+        def infectiousness_callback():
+            """
+            Update either R0 or rate slider, based on the infectious duration, the other
+            value, and which one of the values is taken as fixed.
+            """
+            control = st.session_state["infectiousness_control"]
+            if control == "R0":
+                st.session_state["infection_rate"] = (
+                    st.session_state["R0"] / st.session_state["infectious_duration"]
+                )
+            elif control == "rate":
+                st.session_state["R0"] = (
+                    st.session_state["infection_rate"]
+                    * st.session_state["infectious_duration"]
+                )
+            else:
+                raise RuntimeError(f"Unknown {control=}")
+
         infectious_duration = st.slider(
             "Infectious duration",
+            key="infectious_duration",
             min_value=min_infectious_duration,
             max_value=max_infectious_duration,
             value=default_infectious_duration,
             step=0.1,
             format="%.1f days",
+            on_change=infectiousness_callback,
         )
 
         st.subheader("Infectiousness")
+
         infectiousness_control = st.segmented_control(
             "Variable infectiousness parameter",
+            key="infectiousness_control",
             options=["R0", "rate"],
             selection_mode="single",
             default="R0",
             help="R0 = infectious duration * infection rate. Only two of the "
             "three parameters can be varied.",
         )
-
-        def callback_R0():
-            st.session_state["infection_rate"] = (
-                st.session_state["R0"] / infectious_duration
-            )
-
-        def callback_rate():
-            st.session_state["R0"] = (
-                st.session_state["infection_rate"] * infectious_duration
-            )
 
         R0 = st.slider(
             "R0",
@@ -138,7 +150,7 @@ def app():
             max_value=max_R0,
             step=0.1,
             disabled=infectiousness_control != "R0",
-            on_change=callback_R0,
+            on_change=infectiousness_callback,
         )
 
         infection_rate = st.slider(
@@ -148,7 +160,7 @@ def app():
             max_value=max_R0 / min_infectious_duration,
             step=0.1,
             disabled=infectiousness_control != "rate",
-            on_change=callback_rate,
+            on_change=infectiousness_callback,
         )
 
         # double check that R0, rate, and duration are not in conflict
