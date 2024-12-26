@@ -1,3 +1,4 @@
+import importlib.metadata
 import time
 from typing import List
 
@@ -170,6 +171,8 @@ def app():
             )
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
+
+        st.caption(f"App version: {importlib.metadata.version('ringvax')}")
 
     params = {
         "n_generations": n_generations,
