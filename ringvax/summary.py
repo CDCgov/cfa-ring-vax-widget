@@ -7,16 +7,22 @@ from ringvax import Simulation
 
 infection_schema = pl.Schema(
     {
+        # INIT_SCHEMA
+        "id": pl.String,
         "infector": pl.String,
-        "generation": pl.Int64,
         "t_exposed": pl.Float64,
+        "generation": pl.Int64,
+        # SIM_SCHEMA
+        "simulated": pl.Boolean,
+        "infectees": pl.List(pl.String),
         "t_infectious": pl.Float64,
+        "t_infectious_counterfactual": pl.Float64,
         "t_recovered": pl.Float64,
+        "t_recovered_counterfactual": pl.Float64,
         "infection_rate": pl.Float64,
         "detected": pl.Boolean,
         "detect_method": pl.String,
         "t_detected": pl.Float64,
-        "infection_times": pl.List(pl.Float64),
     }
 )
 """

@@ -6,18 +6,31 @@ import numpy.random
 
 
 class Simulation:
-    PROPERTIES = {
-        "infector",
-        "generation",
-        "t_exposed",
-        "t_infectious",
-        "t_recovered",
-        "infection_rate",
-        "detected",
-        "detect_method",
-        "t_detected",
-        "infection_times",
+    # All infections have this
+    INIT_SCHEMA = {
+        "id": str | None,
+        "infector": str,
+        "t_exposed": float,
+        "generation": int,
     }
+
+    # These are all None until an infection's history is simulated
+    SIM_SCHEMA = {
+        "simulated": bool,
+        "infectees": list[str],
+        "t_infectious": Optional[float],
+        "t_infectious_counterfactual": float,
+        "t_recovered": Optional[float],
+        "t_recovered_counterfactual": float,
+        "infection_rate": float,
+        "detected": bool,
+        "detect_method": Optional[str],
+        "t_detected": Optional[float],
+    }
+
+    SCHEMA = INIT_SCHEMA | SIM_SCHEMA
+
+    PROPERTIES = set(SCHEMA)
 
     def __init__(
         self, params: dict[str, Any], rng: Optional[numpy.random.Generator] = None
@@ -27,17 +40,27 @@ class Simulation:
         self.infections = {}
         self.termination: Optional[str] = None
 
-    def create_person(self) -> str:
+    def instantiate_infection(
+        self, infector: str | None, t_exposed: float, generation: int
+    ) -> str:
         """Add a new person to the data"""
         id = str(len(self.infections))
-        self.infections[id] = {x: None for x in self.PROPERTIES}
+        self.infections[id] = {x: None for x in self.SIM_SCHEMA}
+        self.infections[id]["id"] = id
+        self.infections[id]["infector"] = infector
+        self.infections[id]["t_exposed"] = t_exposed
+        self.infections[id]["generation"] = generation
         return id
 
     def update_person(self, id: str, content: dict[str, Any]) -> None:
-        bad_properties = set(content.keys()) - set(self.PROPERTIES)
+        bad_properties = set(content.keys()) - self.PROPERTIES
         if len(bad_properties) > 0:
             raise RuntimeError(f"Properties not in schema: {bad_properties}")
-
+        bad_types = set(
+            k for k, v in content.items() if not isinstance(v, self.SCHEMA[k])
+        )
+        if len(bad_types) > 0:
+            raise RuntimeError(f"Properties with type not matching schema: {bad_types}")
         self.infections[id] |= content
 
     def get_person_property(self, id: str, property: str) -> Any:
@@ -67,7 +90,7 @@ class Simulation:
         """Run simulation"""
         # queue is pairs (t_exposed, infector)
         # start with the index infection
-        infection_queue: List[tuple[float, Optional[str]]] = [(0.0, None)]
+        infection_queue: List[str] = [self.instantiate_infection(None, 0.0, 0)]
 
         passed_max_generations = False
 
@@ -97,14 +120,13 @@ class Simulation:
                 # exactly hit the maximum and not exceed it.
                 raise RuntimeError("Maximum number of infections exceeded")
 
-            # find the person who is infected next
+            # find the person who is infected next, simulate the course of their infection
             # (the queue is time-sorted, so this is the temporally next infection)
-            t_exposed, infector = infection_queue.pop(0)
+            id = infection_queue.pop(0)
+            self.simulate_infection(id=id)
 
-            # otherwise, instantiate this infection, draw who they in turn infect,
-            # and add the infections they cause to the queue, in time order
-            id = self.create_person()
-            self.generate_infection(id=id, t_exposed=t_exposed, infector=infector)
+            # instantiate infections caused by this infection, collect their IDs
+            secondary_ids = self.instantiate_secondary_infections(id=id)
 
             # if the infector is in the final generation, do not add their
             # infectees to the queue
@@ -118,54 +140,59 @@ class Simulation:
             else:
                 # only add infectees to the queue if we are not yet at maximum
                 # number of generations
-                for t in self.get_person_property(id, "infection_times"):
-                    bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
+                for id in secondary_ids:
+                    bisect.insort_right(
+                        infection_queue,
+                        id,
+                        key=lambda x: self.get_person_property(x, "t_exposed"),
+                    )
 
-    def generate_infection(
-        self, id: str, t_exposed: float, infector: Optional[str]
+    def simulate_infection(
+        self,
+        id: str,
     ) -> None:
         """
         Generate a single infected person's biological disease history, detection
-        history and transmission history
+        history and transmission history.
+
+        Returns id
         """
         # keep track of generations
-        if infector is None:
-            generation = 0
-        else:
-            generation = self.get_person_property(infector, "generation") + 1
-
-        self.update_person(id, {"infector": infector, "generation": generation})
+        t_exposed = self.get_person_property(id, "t_exposed")
 
         # disease state history in this individual
-        disease_history = self.generate_disease_history(t_exposed=t_exposed)
+        disease_history = self.simulate_undetected_disease_history(t_exposed=t_exposed)
         self.update_person(id, disease_history)
 
         # whether this person was detected
-        detection_history = self.generate_detection_history(id)
+        detection_history = self.simulate_detection_history(id)
         self.update_person(id, detection_history)
 
-        if detection_history["detected"]:
-            t_end_infectious = detection_history["t_detected"]
-        else:
-            t_end_infectious = disease_history["t_recovered"]
+        # adjust disease history for detection
+        t_infectious = disease_history["t_infectious_counterfactual"]
+        if (
+            detection_history["detected"]
+            and detection_history["t_detected"] < t_infectious
+        ):
+            t_infectious = None
 
-        # when do they infect people?
-        infection_rate = self.generate_infection_rate()
+        t_recovered = disease_history["t_recovered_counterfactual"]
+        if (
+            detection_history["detected"]
+            and detection_history["t_detected"] < t_recovered
+        ):
+            t_recovered = detection_history["t_detected"]
 
-        if disease_history["t_infectious"] > t_end_infectious:
-            infection_times = np.array([])
-        else:
-            infection_times = self.generate_infection_times(
-                self.rng,
-                rate=infection_rate,
-                infectious_duration=(
-                    t_end_infectious - disease_history["t_infectious"]
-                ),
-            )
+        self.update_person(
+            id,
+            {
+                "simulated": True,
+                "t_infectious": t_infectious,
+                "t_recovered": t_recovered,
+            },
+        )
 
-        self.update_person(id, {"infection_times": infection_times})
-
-    def generate_disease_history(self, t_exposed: float) -> dict[str, Any]:
+    def simulate_undetected_disease_history(self, t_exposed: float) -> dict[str, Any]:
         """Generate infection history for a single infected person"""
         latent_duration = self.generate_latent_duration()
         infectious_duration = self.generate_infectious_duration()
@@ -176,12 +203,12 @@ class Simulation:
 
         return {
             "t_exposed": t_exposed,
-            "t_infectious": t_infectious,
-            "t_recovered": t_recovered,
+            "t_infectious_counterfactual": t_infectious,
+            "t_recovered_counterfactual": t_recovered,
             "infection_rate": infection_rate,
         }
 
-    def generate_detection_history(self, id: str) -> dict[str, Any]:
+    def simulate_detection_history(self, id: str) -> dict[str, Any]:
         """Determine if a person is infected, and when"""
         infector = self.get_person_property(id, "infector")
 
@@ -226,6 +253,36 @@ class Simulation:
             "t_detected": t_detected,
         }
 
+    def instantiate_secondary_infections(self, id: str) -> list[str]:
+        """
+        Draw times and instantiate infections for all infections caused by this infection.
+
+        Return their ids.
+        """
+        secondaries = []
+
+        t_infectious = self.get_person_property(id, "t_infectious")
+        if t_infectious is not None:
+            generation = self.get_person_property(id, "generation")
+            infection_rate = self.get_person_property(id, "infection_rate")
+            t_recovered = self.get_person_property(id, "t_recovered")
+
+            secondaries = [
+                self.instantiate_infection(
+                    id,
+                    time + t_infectious,
+                    generation + 1,
+                )
+                for time in self.generate_infection_waiting_times(
+                    self.rng,
+                    rate=infection_rate,
+                    infectious_duration=(t_recovered - t_infectious),
+                )
+            ]
+
+        self.update_person(id, {"infectees": secondaries})
+        return secondaries
+
     def generate_latent_duration(self) -> float:
         return self.params["latent_duration"]
 
@@ -242,7 +299,7 @@ class Simulation:
         return self.params["active_detection_delay"]
 
     @staticmethod
-    def generate_infection_times(
+    def generate_infection_waiting_times(
         rng: numpy.random.Generator, rate: float, infectious_duration: float
     ) -> np.ndarray:
         """Times from onset of infectiousness to each infection"""
