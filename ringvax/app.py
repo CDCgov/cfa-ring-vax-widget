@@ -18,6 +18,44 @@ from ringvax.summary import (
 )
 
 
+@st.cache_data
+def run_simulations(n: int, params: dict, seed: int) -> List[Simulation]:
+    """
+    Run simulations and display progress bar
+
+    Args:
+        n (int): number of simulations
+        params (dict): simulation parameters
+        seed (int): random seed
+    """
+
+    progress_text = (
+        "Running simulation... Slow simulations may indicate unreasonable "
+        "parameter values leading to unrealistically large total numbers of "
+        "infections."
+    )
+    progress_bar = st.progress(0, text=progress_text)
+
+    tic = time.perf_counter()
+    sims = []
+
+    # initialize rngs
+    rngs = numpy.random.default_rng(seed).spawn(n)
+
+    for i in range(n):
+        progress_bar.progress(i / n, text=progress_text)
+        sim = Simulation(params=params, rng=rngs[i])
+        sim.run()
+        sims.append(sim)
+
+    progress_bar.empty()
+    toc = time.perf_counter()
+
+    st.write(f"Ran {n} simulations in {format_duration(toc - tic)}")
+
+    return sims
+
+
 def render_percents(df: pl.DataFrame) -> pl.DataFrame:
     return df.with_columns(
         pl.when(pl.col(col).is_nan())
@@ -259,31 +297,9 @@ def app():
         "max_infections": max_infections,
     }
 
-    progress_text = (
-        "Running simulation... Slow simulations may indicate unreasonable "
-        "parameter values leading to unrealistically large total numbers of "
-        "infections."
-    )
-    progress_bar = st.progress(0, text=progress_text)
-
     # run simulations ---------------------------------------------------------
-    tic = time.perf_counter()
-    sims = []
 
-    # initialize rngs
-    rngs = numpy.random.default_rng(seed).spawn(nsim)
-
-    for i in range(nsim):
-        progress_bar.progress(i / nsim, text=progress_text)
-        sim = Simulation(params=params, rng=rngs[i])
-        sim.run()
-        sims.append(sim)
-
-    progress_bar.empty()
-    toc = time.perf_counter()
-    # end simulations ---------------------------------------------------------
-
-    st.write(f"Ran {nsim} simulations in {format_duration(toc - tic)}")
+    sims = run_simulations(n=nsim, params=params, seed=seed)
 
     n_at_max = sum(1 for sim in sims if sim.termination == "max_infections")
 
