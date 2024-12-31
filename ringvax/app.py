@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Optional
 
 import altair as alt
 import graphviz
@@ -88,6 +88,50 @@ def format_duration(x: float, digits=3) -> str:
         return f"{round(x, digits)} seconds"
 
 
+def day_slider(
+    label,
+    default: Optional[float] = None,
+    min_value=0.0,
+    max_value=10.0,
+    step=0.1,
+    format="%.1f days",
+    **kwargs,
+) -> float:
+    """Slider for days, with sensible defaults"""
+    return st.slider(
+        label,
+        min_value=min_value,
+        max_value=max_value,
+        value=default,
+        step=step,
+        format=format,
+        **kwargs,
+    )
+
+
+def pct_slider(
+    label,
+    default: Optional[float] = None,
+    min_value=0.0,
+    max_value=1.0,
+    step=0.01,
+    **kwargs,
+) -> float:
+    """Slider for percentages, with inputs and outputs as proportions"""
+    return (
+        st.slider(
+            label,
+            min_value=min_value * 100,
+            max_value=max_value * 100,
+            value=None if default is None else default * 100,
+            step=step * 100,
+            format="%d%%",
+            **kwargs,
+        )
+        / 100
+    )
+
+
 def set_session_default(key, value) -> None:
     if key not in st.session_state:
         st.session_state[key] = value
@@ -134,14 +178,12 @@ def app():
             else:
                 raise RuntimeError(f"Unknown {control=}")
 
-        infectious_duration = st.slider(
+        infectious_duration = day_slider(
             "Infectious duration",
             key="infectious_duration",
             min_value=min_infectious_duration,
             max_value=max_infectious_duration,
-            value=default_infectious_duration,
-            step=0.1,
-            format="%.1f days",
+            default=default_infectious_duration,
             on_change=infectiousness_callback,
         )
 
@@ -186,44 +228,10 @@ def app():
             st.warning(f"Selected infectious rate yields R0 > {max_R0}")
 
         st.subheader("Detection")
-        p_passive_detect = (
-            st.slider(
-                "Passive detection probability",
-                min_value=0.0,
-                max_value=100.0,
-                value=50.0,
-                step=1.0,
-                format="%d%%",
-            )
-            / 100.0
-        )
-        passive_detection_delay = st.slider(
-            "Passive detection delay",
-            min_value=0.0,
-            max_value=10.0,
-            value=2.0,
-            step=0.1,
-            format="%.1f days",
-        )
-        p_active_detect = (
-            st.slider(
-                "Active detection probability",
-                min_value=0.0,
-                max_value=100.0,
-                value=15.0,
-                step=1.0,
-                format="%d%%",
-            )
-            / 100.0
-        )
-        active_detection_delay = st.slider(
-            "Active detection delay",
-            min_value=0.0,
-            max_value=10.0,
-            value=2.0,
-            step=0.1,
-            format="%.1f days",
-        )
+        p_passive_detect = pct_slider("Passive detection probability", default=0.5)
+        passive_detection_delay = day_slider("Passive detection delay", default=2.0)
+        p_active_detect = pct_slider("Active detection probability", default=0.15)
+        active_detection_delay = day_slider("Active detection delay", default=2.0)
 
         with st.expander("Advanced Options"):
             n_generations = st.number_input(
