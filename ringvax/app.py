@@ -94,6 +94,10 @@ def set_session_default(key, value) -> None:
 
 
 def app():
+    st.info(
+        "This interactive application is a prototype designed for software testing and educational purposes."
+    )
+
     st.title("Ring vaccination")
 
     with st.sidebar:
