@@ -361,6 +361,18 @@ def app():
 
         with tab2:
             st.header("Graph of infections")
+            st.text(
+                (
+                    "In these figures, each horizontal line is an infection, with the stage denoted "
+                    "by the color (blue for initial exposed period, red for subsequent infectious period). "
+                    "The x-axis is time, with t=0 the time the index case is exposed. "
+                    "Vertical black lines link infections with the infections they cause at the time of exposure. "
+                    "Unsimulated infections (those caused by the final completely-simulated generation) "
+                    "are denoted with blue vertical tick marks."
+                    "Infections which are detected have the counterfactual (unrealized) portion of their "
+                    "history shown in transparency. Active detections are highlighted with black triangles. "
+                )
+            )
             show_graph(sims=sims, annotate_generation=plot_gen)
 
 
