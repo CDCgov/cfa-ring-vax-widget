@@ -12,6 +12,7 @@ stage_map = {
 
 
 def fwd_triangle(x0, yc, width, height, ppl):
+    print(f"Making triangle with width {width} and height {height}")
     x = np.array(
         [
             *([x0] * (ppl - 1)),
@@ -94,7 +95,7 @@ def get_stage_info(
         )
 
 
-def mark_detection(ax, id, sim: Simulation, plot_par):
+def mark_detection(ax, id, sim: Simulation, plot_par, fixed_height: bool = False):
     """
     If this infection was detected, mark that.
     """
@@ -104,13 +105,15 @@ def mark_detection(ax, id, sim: Simulation, plot_par):
     ):
         y_loc = plot_par["height"][id]
         x_loc = sim.get_person_property(id, "t_detected")
-        x_adj = (
-            2
-            / 3
-            * (max(plot_par["x_range"]) - min(plot_par["x_range"]))
-            / (max(plot_par["y_range"]) - min(plot_par["y_range"]))
-        )
         y_adj = 1.5
+        x_adj = y_adj / 2.0
+        if fixed_height:
+            x_adj = (
+                2
+                / 3
+                * (max(plot_par["x_range"]) - min(plot_par["x_range"]))
+                / (max(plot_par["y_range"]) - min(plot_par["y_range"]))
+            )
         x, y = fwd_triangle(
             x_loc,
             y_loc,
@@ -273,7 +276,8 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
         "history_thickness": 0.25,
         "ppl": 100,
         "height": {
-            inf: len(plot_order) - 1.0 * height for height, inf in enumerate(plot_order)
+            inf: len(plot_order) - 1.0 * height - 1.0
+            for height, inf in enumerate(plot_order)
         },
         "x_range": [
             0.0,
@@ -282,11 +286,13 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
                 for id in sim.infections.keys()
             ),
         ],
-        "y_range": [0.0, len(sim.infections)],
+        "y_range": [-1.0, len(sim.infections)],
     }
 
 
 def plot_simulation(sim: Simulation, par: dict[str, Any]):
+    n_inf = len(sim.query_people())
+
     plot_par = make_plot_par(sim) | par
 
     fig, ax = plt.subplots()
@@ -300,8 +306,12 @@ def plot_simulation(sim: Simulation, par: dict[str, Any]):
 
         connect_child_infections(ax, inf, sim, plot_par)
 
+    if n_inf == 1:
+        plot_par["history_thickness"] = 1.5 * plot_par["history_thickness"]
+    ax.set(ylim=plot_par["y_range"])
     ax.yaxis.set_visible(False)
     ax.xaxis.set_ticks_position("bottom")
     ax.xaxis.set_label_position("bottom")
     ax.set_xlabel("time")
+    fig.set_figheight(0.2 * n_inf)
     return fig
