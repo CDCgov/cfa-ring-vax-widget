@@ -31,6 +31,7 @@ def render_percents(df: pl.DataFrame) -> pl.DataFrame:
         for col in df.columns
     )
 
+
 @st.fragment
 def show_graph(sims: List[Simulation], annotate_generation: bool, pause: float = 0.1):
     """Show a transmission graph. Wrap as st.fragment, to not re-run simulations.
