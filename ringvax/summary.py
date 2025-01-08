@@ -99,6 +99,10 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
         "count"
     ][0]
 
+    all_detection_counts = df.select(pl.col("detect_method").value_counts()).unnest(
+        "detect_method"
+    )
+
     nonindex_detection_counts = (
         df.filter(pl.col("infector").is_not_null())
         .select(pl.col("detect_method").value_counts())
@@ -112,14 +116,12 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     )
 
     count_nodetect = 0
-    if (
-        nonindex_detection_counts.filter(pl.col("detect_method").is_null()).shape[0]
-        == 1
-    ):
-        count_nodetect = nonindex_detection_counts.filter(
-            pl.col("detect_method").is_null()
-        )["count"][0]
-    count_active, count_passive_nonindex, count_index_not = 0, 0, n_sims
+    if all_detection_counts.filter(pl.col("detect_method").is_null()).shape[0] == 1:
+        count_nodetect = all_detection_counts.filter(pl.col("detect_method").is_null())[
+            "count"
+        ][0]
+
+    count_active, count_passive_nonindex = 0, 0
     if (
         nonindex_detection_counts.filter(pl.col("detect_method") == "active").shape[0]
         == 1
@@ -134,12 +136,9 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
         count_passive_nonindex = nonindex_detection_counts.filter(
             pl.col("detect_method") == "passive"
         )["count"][0]
-    if (
-        not index_detection_counts.filter(pl.col("detect_method").is_null()).is_empty()
-    ) and (
-        index_detection_counts.filter(pl.col("detect_method").is_null())["count"][0]
-        != n_sims
-    ):
+
+    count_index_not = 0
+    if not index_detection_counts.filter(pl.col("detect_method").is_null()).is_empty():
         count_index_not = index_detection_counts.filter(
             pl.col("detect_method").is_null()
         )["count"][0]
