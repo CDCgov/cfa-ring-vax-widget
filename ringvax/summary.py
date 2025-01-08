@@ -151,12 +151,24 @@ def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
     return 1.0 - (size_at_gen.shape[0] / n_sim)
 
 
-def get_total_infection_count_df(df: pl.DataFrame) -> pl.DataFrame:
+def get_generational_infection_count_df(df: pl.DataFrame) -> pl.DataFrame:
     """
-    Get DataFrame of all total outbreak sizes from simulations
+    Get DataFrame of number of infections in each generation from simulations.
     """
-    return (
-        df.group_by("simulation")
-        # length of anything in the grouped dataframe is number of infections
-        .agg(pl.col("t_exposed").len().alias("size"))
+    non_extinct = df.group_by("simulation", "generation").agg(count=pl.len())
+
+    gmax = df["generation"].to_numpy().astype(int).max()
+    nsims = df["simulation"].to_numpy().astype(int).max() + 1
+
+    all_extinct = []
+    for i in range(nsims):
+        for g in range(gmax + 1):
+            all_extinct.append({"simulation": i, "generation": g, "count": 0})
+
+    all_extinct = pl.DataFrame(all_extinct).cast(
+        {"count": pl.UInt32, "simulation": pl.Int32}
     )
+
+    extinct = all_extinct.join(non_extinct, on=["simulation", "generation"], how="anti")
+
+    return pl.concat([non_extinct, extinct])

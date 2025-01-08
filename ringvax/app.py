@@ -11,7 +11,7 @@ import streamlit as st
 from ringvax import Simulation
 from ringvax.summary import (
     get_all_person_properties,
-    get_total_infection_count_df,
+    get_generational_infection_count_df,
     prob_control_by_gen,
     summarize_detections,
     summarize_infections,
@@ -62,7 +62,7 @@ def render_percents(df: pl.DataFrame) -> pl.DataFrame:
         .then(pl.lit("Not a number"))
         .otherwise(
             pl.col(col).map_elements(
-                lambda x: f"{round(x):.0f}%", return_dtype=pl.String
+                lambda x: f"{round(x * 100):.0f}%", return_dtype=pl.String
             )
         )
         .alias(col)
@@ -363,14 +363,42 @@ def app():
             )
 
             st.header("Number of infections")
-            st.write(
-                f"Distribution of the total number of infections seen in {n_generations} generations."
-            )
+            with st.expander("Plot Options"):
+                generational_counts = get_generational_infection_count_df(sim_df)
+                plot_gen = st.segmented_control(
+                    "Generation to plot",
+                    options=range(1, n_generations + 1),
+                    default=n_generations,
+                )
+                cumulative = (
+                    True
+                    if st.segmented_control(
+                        "Show infections cumulatively or in specific generation?",
+                        options=["Cumulative", "In generation"],
+                        default="Cumulative",
+                    )
+                    == "Cumulative"
+                    else False
+                )
+
+                if cumulative:
+                    counts = (
+                        generational_counts.filter(pl.col("generation") <= plot_gen)
+                        .group_by("simulation")
+                        .agg(pl.col("count").sum())
+                    )
+                else:
+                    counts = generational_counts.filter(
+                        pl.col("generation") == plot_gen
+                    )
+
+            size_hist_title = f"Distribution of the {'cumulative ' if cumulative else ''}number of infections seen {'up to and including' if cumulative else 'in'} generation {plot_gen} ."
+            st.write(size_hist_title)
             st.altair_chart(
-                alt.Chart(get_total_infection_count_df(sim_df))
+                alt.Chart(counts)
                 .mark_bar()
                 .encode(
-                    x=alt.X("size:Q", bin=True, title="Number of infections"),
+                    x=alt.X("count:Q", bin=True, title="Number of infections"),
                     y=alt.Y("count()", title="Count"),
                 )
             )
