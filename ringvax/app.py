@@ -392,7 +392,7 @@ def app():
                         pl.col("generation") == plot_gen
                     )
 
-            size_hist_title = f"Distribution of the {'cumulative ' if cumulative else ''}number of infections seen {'up to and including' if cumulative else 'in'} generation {plot_gen} ."
+            size_hist_title = f"Distribution of the {'cumulative ' if cumulative else ''}number of infections seen {'up to and including' if cumulative else 'in'} generation {plot_gen}."
             st.write(size_hist_title)
             st.altair_chart(
                 alt.Chart(counts)
