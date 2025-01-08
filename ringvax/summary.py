@@ -2,6 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import polars as pl
+from polars.testing import assert_frame_equal
 
 from ringvax import Simulation
 
@@ -72,39 +73,101 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get marginal detection probabilities from simulations.
     """
-    nsims = len(df["simulation"].unique())
+    n_sims = len(df["simulation"].unique())
     n_infections = df.shape[0]
-    n_active_eligible = n_infections - nsims
-    detection_counts = df.select(pl.col("detect_method").value_counts()).unnest(
-        "detect_method"
+
+    parent_detected_df = (
+        df.join(
+            df.select(["simulation", "id", "detected"]).rename({"id": "infector"}),
+            on=["simulation", "infector"],
+            how="left",
+        )
+        .unique(["simulation", "id"])
+        .rename({"detected_right": "infector_detected"})
+    )
+    assert_frame_equal(
+        parent_detected_df.drop("infector_detected", "infectees", "infection_times"),
+        df.drop("infectees", "infection_times"),
+        check_row_order=False,
+    )
+    parent_detected_counts = parent_detected_df["infector_detected"].value_counts()
+    assert (
+        parent_detected_counts.filter(pl.col("infector_detected").is_null())["count"][0]
+        == n_sims
+    )
+    n_active_eligible = parent_detected_counts.filter(pl.col("infector_detected"))[
+        "count"
+    ][0]
+
+    nonindex_detection_counts = (
+        df.filter(pl.col("infector").is_not_null())
+        .select(pl.col("detect_method").value_counts())
+        .unnest("detect_method")
+    )
+
+    index_detection_counts = (
+        df.filter(pl.col("infector").is_null())
+        .select(pl.col("detect_method").value_counts())
+        .unnest("detect_method")
     )
 
     count_nodetect = 0
-    if detection_counts.filter(pl.col("detect_method").is_null()).shape[0] == 1:
-        count_nodetect = detection_counts.filter(pl.col("detect_method").is_null())[
-            "count"
-        ]
-    count_active, count_passive = 0, 0
-    if detection_counts.filter(pl.col("detect_method") == "active").shape[0] == 1:
-        count_active = detection_counts.filter(pl.col("detect_method") == "active")[
-            "count"
-        ]
-    if detection_counts.filter(pl.col("detect_method") == "passive").shape[0] == 1:
-        count_passive = detection_counts.filter(pl.col("detect_method") == "passive")[
-            "count"
-        ]
+    if (
+        nonindex_detection_counts.filter(pl.col("detect_method").is_null()).shape[0]
+        == 1
+    ):
+        count_nodetect = nonindex_detection_counts.filter(
+            pl.col("detect_method").is_null()
+        )["count"][0]
+    count_active, count_passive_nonindex, count_index_not = 0, 0, n_sims
+    if (
+        nonindex_detection_counts.filter(pl.col("detect_method") == "active").shape[0]
+        == 1
+    ):
+        count_active = nonindex_detection_counts.filter(
+            pl.col("detect_method") == "active"
+        )["count"][0]
+    if (
+        nonindex_detection_counts.filter(pl.col("detect_method") == "passive").shape[0]
+        == 1
+    ):
+        count_passive_nonindex = nonindex_detection_counts.filter(
+            pl.col("detect_method") == "passive"
+        )["count"][0]
+    if (
+        not index_detection_counts.filter(pl.col("detect_method").is_null()).is_empty()
+    ) and (
+        index_detection_counts.filter(pl.col("detect_method").is_null())["count"][0]
+        != n_sims
+    ):
+        count_index_not = index_detection_counts.filter(
+            pl.col("detect_method").is_null()
+        )["count"][0]
 
+    detect_types = [
+        "Any",
+        "Index case",
+        "Active (among eligible)",
+        "Passive (among non-index cases)",
+        "Before infectiousness",
+    ]
+
+    detect_probs = [
+        1.0 - np.divide(count_nodetect, n_infections),
+        1.0 - np.divide(count_index_not, n_sims),
+        np.divide(count_active, n_active_eligible),
+        np.divide(count_passive_nonindex, n_infections - n_sims),
+        np.divide(
+            df.filter(pl.col("detected"))
+            .filter(pl.col("t_detected") < pl.col("t_infectious"))
+            .shape[0],
+            n_infections,
+        ),
+    ]
     return pl.DataFrame(
         {
-            "prob_detect": 1.0 - np.divide(count_nodetect, n_infections),
-            "prob_active": np.divide(count_active, n_active_eligible),
-            "prob_passive": np.divide(count_passive, n_infections),
-            "prob_detect_before_infectious": np.divide(
-                df.filter(pl.col("detected"))
-                .filter(pl.col("t_detected") < pl.col("t_infectious"))
-                .shape[0],
-                n_infections,
-            ),
+            "Detection category": detect_types,
+            "Probability": detect_probs,
         }
     )
 

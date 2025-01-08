@@ -18,17 +18,13 @@ from ringvax.summary import (
 )
 
 
-def render_percents(df: pl.DataFrame) -> pl.DataFrame:
-    return df.with_columns(
-        pl.when(pl.col(col).is_nan())
+def render_percents_expr(col: pl.Expr) -> pl.Expr:
+    return (
+        pl.when(col.is_nan())
         .then(pl.lit("Not a number"))
         .otherwise(
-            pl.col(col).map_elements(
-                lambda x: f"{round(x):.0f}%", return_dtype=pl.String
-            )
+            col.map_elements(lambda x: f"{round(x * 100):.0f}%", return_dtype=pl.String)
         )
-        .alias(col)
-        for col in df.columns
     )
 
 
@@ -340,22 +336,15 @@ def app():
 
             st.write(
                 (
-                    "The following table provides summaries of marginal probabilities regarding detection. "
-                    "Aside from the marginal probability of active detection, these are the observed "
-                    "probabilities that any individual is detected in this manner, including the index case. "
-                    "The marginal probability of active detection excludes index cases, which are not "
-                    "eligible for active detection."
+                    "The following table provides summaries of various probabilities of detection. "
                 )
             )
             detection = summarize_detections(sim_df)
             st.dataframe(
-                render_percents(detection).rename(
-                    {
-                        "prob_detect": "Any detection",
-                        "prob_active": "Active detection",
-                        "prob_passive": "Passive detection",
-                        "prob_detect_before_infectious": "Detection before onset of infectiousness",
-                    }
+                detection.with_columns(
+                    pl.col("Probability")
+                    .pipe(render_percents_expr)
+                    .alias("Probability")
                 )
             )
 
