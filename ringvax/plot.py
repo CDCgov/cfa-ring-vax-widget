@@ -12,7 +12,6 @@ stage_map = {
 
 
 def fwd_triangle(x0, yc, width, height, ppl):
-    print(f"Making triangle with width {width} and height {height}")
     x = np.array(
         [
             *([x0] * (ppl - 1)),
