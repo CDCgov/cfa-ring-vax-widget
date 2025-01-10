@@ -264,7 +264,7 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
         "color": {
             "latent": "#4477AA",
             "infectious": "#EE6677",
-            "infection": "#4477AA",
+            "infection": "#000000",
             "connection": "#000000",
             "detection": "#000000",
         },

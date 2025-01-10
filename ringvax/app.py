@@ -230,7 +230,7 @@ def app():
             )
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
-            plot_gen = st.button("Show infection's generation?")
+            plot_gen = st.toggle("Show infection's generation", value=False)
 
     params = {
         "n_generations": n_generations,
