@@ -371,14 +371,12 @@ def app():
                     default=n_generations,
                 )
                 cumulative = (
-                    True
-                    if st.segmented_control(
+                    st.segmented_control(
                         "Show infections cumulatively or in specific generation?",
                         options=["Cumulative", "In generation"],
                         default="Cumulative",
                     )
                     == "Cumulative"
-                    else False
                 )
 
                 if cumulative:
