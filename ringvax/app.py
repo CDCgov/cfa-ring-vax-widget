@@ -1,4 +1,4 @@
-import importlib.metadata
+import subprocess
 import time
 from typing import List, Optional
 
@@ -160,6 +160,14 @@ def set_session_default(key, value) -> None:
         st.session_state[key] = value
 
 
+def get_commit() -> Optional[str]:
+    x = subprocess.run(["git", "rev-parse", "--short=15", "HEAD"], capture_output=True)
+    if x.returncode != 0:
+        return None
+    else:
+        return x.stdout.decode().strip()
+
+
 def app():
     st.info(
         "This interactive application is a prototype designed for software testing and educational purposes."
@@ -283,7 +291,9 @@ def app():
             nsim = st.number_input("Number of simulations", value=250, step=1)
             plot_gen = st.toggle("Show infection's generation", value=False)
 
-        st.caption(f"App version: {importlib.metadata.version('ringvax')}")
+        commit = get_commit()
+        if commit is not None:
+            st.caption(f"App version: {commit}")
 
     params = {
         "n_generations": n_generations,
