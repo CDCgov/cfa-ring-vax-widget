@@ -383,7 +383,7 @@ def app():
                     counts = (
                         generational_counts.filter(pl.col("generation") <= plot_gen)
                         .group_by("simulation")
-                        .agg(pl.col("count").sum())
+                        .agg(pl.col("num_infections").sum())
                     )
                 else:
                     counts = generational_counts.filter(
@@ -396,7 +396,7 @@ def app():
                 alt.Chart(counts)
                 .mark_bar()
                 .encode(
-                    x=alt.X("count:Q", bin=True, title="Number of infections"),
+                    x=alt.X("num_infections:Q", bin=True, title="Number of infections"),
                     y=alt.Y("count()", title="Number of simulations"),
                 )
             )

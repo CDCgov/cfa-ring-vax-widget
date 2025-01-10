@@ -155,19 +155,19 @@ def get_generational_infection_count_df(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get DataFrame of number of infections in each generation from simulations.
     """
-    non_extinct = df.group_by("simulation", "generation").agg(count=pl.len())
+    non_extinct = df.group_by("simulation", "generation").agg(num_infections=pl.len())
 
     gmax = int(max(df["generation"]))
     nsims = int(max(df["simulation"])) + 1
 
     all_extinct = [
-        {"simulation": i, "generation": g, "count": 0}
+        {"simulation": i, "generation": g, "num_infections": 0}
         for i in range(nsims)
         for g in range(gmax + 1)
     ]
 
     all_extinct = pl.DataFrame(all_extinct).cast(
-        {"count": pl.UInt32, "simulation": pl.Int32}
+        {"num_infections": pl.UInt32, "simulation": pl.Int32}
     )
 
     extinct = all_extinct.join(non_extinct, on=["simulation", "generation"], how="anti")
