@@ -397,7 +397,7 @@ def app():
                 .mark_bar()
                 .encode(
                     x=alt.X("count:Q", bin=True, title="Number of infections"),
-                    y=alt.Y("count()", title="Count"),
+                    y=alt.Y("count()", title="Number of simulations"),
                 )
             )
 
