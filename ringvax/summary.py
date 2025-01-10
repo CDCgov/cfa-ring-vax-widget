@@ -138,6 +138,7 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
         "Any",
         "Any",
         "Any",
+        "Any",
         "Passive",
         "Active",
     ]
@@ -146,6 +147,7 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
         "None",
         "Detect before infectious",
         "Index case",
+        "Non-index case",
         "Non-index case",
         "Active-eligible",
     ]
@@ -160,6 +162,12 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
             df,
             "any",
             "is_index",
+        ),
+        empirical_detection_prob(
+            df,
+            "any",
+            "is_index",
+            not_=True,
         ),
         empirical_detection_prob(df, "passive", "is_index", not_=True),
         empirical_detection_prob(df, "active", "active_eligible"),
