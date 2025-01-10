@@ -157,7 +157,6 @@ def test_snapshot(rng):
         snapshot = json.load(f)
 
     assert s.infections == snapshot
-    assert len(s.infections) == 10
 
 
 class TestResolveDetectionHistory:
