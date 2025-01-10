@@ -157,12 +157,12 @@ def get_generational_infection_count_df(df: pl.DataFrame) -> pl.DataFrame:
     """
     non_extinct = df.group_by("simulation", "generation").agg(count=pl.len())
 
-    gmax = df["generation"].to_numpy().astype(int).max()
-    nsims = df["simulation"].to_numpy().astype(int).max() + 1
+    gmax = int(max(df["generation"]))
+    nsims = int(max(df["simulation"])) + 1
 
     all_extinct = [
         {"simulation": i, "generation": g, "count": 0}
-        for i in range(nsims):
+        for i in range(nsims)
         for g in range(gmax + 1)
     ]
 
