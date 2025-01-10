@@ -57,18 +57,15 @@ def run_simulations(n: int, params: dict, seed: int) -> List[Simulation]:
     return sims
 
 
-def render_percents(df: pl.DataFrame) -> pl.DataFrame:
-    return df.with_columns(
-        pl.when(pl.col(col).is_nan())
-        .then(pl.lit("Not a number"))
-        .otherwise(
-            pl.col(col).map_elements(
-                lambda x: f"{round(x * 100):.0f}%", return_dtype=pl.String
-            )
-        )
-        .alias(col)
-        for col in df.columns
-    )
+def str_percent(x: np.float64) -> str:
+    if np.isnan(x):
+        return "Not a number"
+    else:
+        return f"{x:.0%}"
+
+
+def render_percents_expr(col: pl.Expr) -> pl.Expr:
+    return col.map_elements(str_percent, return_dtype=pl.String)
 
 
 @st.fragment
@@ -416,24 +413,13 @@ def app():
                 f"In these simulations, the average duration of infectiousness was {infection['mean_infectious_duration'][0]:.2f} and $R_e$ was {infection['mean_n_infections'][0]:.2f}"
             )
 
-            st.write(
-                (
-                    "The following table provides summaries of marginal probabilities regarding detection. "
-                    "Aside from the marginal probability of active detection, these are the observed "
-                    "probabilities that any individual is detected in this manner, including the index case. "
-                    "The marginal probability of active detection excludes index cases, which are not "
-                    "eligible for active detection."
-                )
-            )
+            st.subheader("Detection probabilities")
             detection = summarize_detections(sim_df)
             st.dataframe(
-                render_percents(detection).rename(
-                    {
-                        "prob_detect": "Any detection",
-                        "prob_active": "Active detection",
-                        "prob_passive": "Passive detection",
-                        "prob_detect_before_infectious": "Detection before onset of infectiousness",
-                    }
+                detection.with_columns(
+                    pl.col("Probability")
+                    .pipe(render_percents_expr)
+                    .alias("Probability")
                 )
             )
 

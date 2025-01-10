@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 import polars as pl
@@ -68,43 +68,115 @@ def _prepare_for_df(infection: dict) -> dict:
 
 
 @np.errstate(invalid="ignore")
+def empirical_detection_prob(
+    df: pl.DataFrame,
+    detect_method: str,
+    conditional_column: Optional[str] = None,
+    not_: bool = False,
+    numerator=False,
+) -> np.float64:
+    """
+    Computes the proportion of cases in `df` detected by method `detect_method` ("passive", "active", or "any" (for both)) without raising errors for 0/0 division.
+    Can use `conditional_column` to compute either Pr(detect | condition met) (`numerator` == False) or Pr(detect and condition met) (`numerator` == True.)
+    If `not_` == True, conditioning is on !`conditional_column`.
+    """
+    if conditional_column is not None:
+        assert conditional_column in df.columns
+        assert df.schema[conditional_column] == pl.Boolean
+
+        if not_:
+            df = df.with_columns(
+                pl.col(conditional_column).not_().alias(conditional_column)
+            )
+
+        if not numerator:
+            if df.filter(pl.col(conditional_column)).is_empty():
+                return np.divide(0.0, 0.0)
+
+            df = df.filter(pl.col(conditional_column))
+
+    all_methods = ["passive", "active"]
+    if detect_method == "any":
+        match_methods = all_methods
+    else:
+        assert (
+            detect_method in all_methods
+        ), f"Unrecognized detection method {detect_method}"
+        match_methods = [detect_method]
+
+    detections = df.filter(pl.col("detect_method").is_in(match_methods))
+
+    if numerator and conditional_column is not None:
+        detections = detections.filter(pl.col(conditional_column))
+
+    return np.divide(detections.shape[0], df.shape[0])
+
+
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get marginal detection probabilities from simulations.
     """
-    nsims = len(df["simulation"].unique())
     n_infections = df.shape[0]
-    n_active_eligible = n_infections - nsims
-    detection_counts = df.select(pl.col("detect_method").value_counts()).unnest(
-        "detect_method"
+
+    # Add in eligibility conditions
+    df = (
+        df.join(
+            df.select(["simulation", "id", "detected"]).rename({"id": "infector"}),
+            on=["simulation", "infector"],
+            how="left",
+        )
+        .unique(["simulation", "id"])
+        .rename({"detected_right": "active_eligible"})
+        .with_columns(
+            is_index=pl.col("infector").is_null(),
+            before_infectious=(pl.col("t_detected") < pl.col("t_infectious")),
+        )
     )
+    assert df.shape[0] == n_infections
 
-    count_nodetect = 0
-    if detection_counts.filter(pl.col("detect_method").is_null()).shape[0] == 1:
-        count_nodetect = detection_counts.filter(pl.col("detect_method").is_null())[
-            "count"
-        ]
-    count_active, count_passive = 0, 0
-    if detection_counts.filter(pl.col("detect_method") == "active").shape[0] == 1:
-        count_active = detection_counts.filter(pl.col("detect_method") == "active")[
-            "count"
-        ]
-    if detection_counts.filter(pl.col("detect_method") == "passive").shape[0] == 1:
-        count_passive = detection_counts.filter(pl.col("detect_method") == "passive")[
-            "count"
-        ]
+    detect_method = [
+        "Any",
+        "Any",
+        "Any",
+        "Any",
+        "Passive",
+        "Active",
+    ]
 
+    restriction = [
+        "None",
+        "Detect before infectious",
+        "Index case",
+        "Non-index case",
+        "Non-index case",
+        "Active-eligible",
+    ]
+
+    detect_probs = [
+        empirical_detection_prob(
+            df,
+            "any",
+        ),
+        empirical_detection_prob(df, "any", "before_infectious", numerator=True),
+        empirical_detection_prob(
+            df,
+            "any",
+            "is_index",
+        ),
+        empirical_detection_prob(
+            df,
+            "any",
+            "is_index",
+            not_=True,
+        ),
+        empirical_detection_prob(df, "passive", "is_index", not_=True),
+        empirical_detection_prob(df, "active", "active_eligible"),
+    ]
     return pl.DataFrame(
         {
-            "prob_detect": 1.0 - np.divide(count_nodetect, n_infections),
-            "prob_active": np.divide(count_active, n_active_eligible),
-            "prob_passive": np.divide(count_passive, n_infections),
-            "prob_detect_before_infectious": np.divide(
-                df.filter(pl.col("detected"))
-                .filter(pl.col("t_detected") < pl.col("t_infectious"))
-                .shape[0],
-                n_infections,
-            ),
+            "Method": detect_method,
+            "Restrictions": restriction,
+            "Probability": detect_probs,
         }
     )
 
