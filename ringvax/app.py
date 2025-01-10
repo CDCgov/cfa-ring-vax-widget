@@ -18,14 +18,15 @@ from ringvax.summary import (
 )
 
 
+def str_percent(x: np.float64) -> str:
+    if np.isnan(x):
+        return "Not a number"
+    else:
+        return f"{round(x * 100):.0f}%"
+
+
 def render_percents_expr(col: pl.Expr) -> pl.Expr:
-    return (
-        pl.when(col.is_nan())
-        .then(pl.lit("Not a number"))
-        .otherwise(
-            col.map_elements(lambda x: f"{round(x * 100):.0f}%", return_dtype=pl.String)
-        )
-    )
+    return col.map_elements(str_percent, return_dtype=pl.String)
 
 
 @st.fragment
