@@ -160,12 +160,16 @@ def set_session_default(key, value) -> None:
         st.session_state[key] = value
 
 
-def get_commit() -> Optional[str]:
-    x = subprocess.run(["git", "rev-parse", "--short=15", "HEAD"], capture_output=True)
-    if x.returncode != 0:
-        return None
+def get_commit(length: int = 15) -> Optional[str]:
+    x = subprocess.run(
+        ["git", "rev-parse", f"--short={length}", "HEAD"], capture_output=True
+    )
+    if x.returncode == 0:
+        commit = x.stdout.decode().strip()
+        assert len(commit) == length
+        return commit
     else:
-        return x.stdout.decode().strip()
+        return None
 
 
 def app():
