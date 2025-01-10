@@ -297,6 +297,20 @@ def app():
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
 
+            plot_gen = st.segmented_control(
+                "Generation to plot",
+                options=range(1, n_generations + 1),
+                default=n_generations,
+            )
+            cumulative = (
+                st.segmented_control(
+                    "Show infections cumulatively or in specific generation?",
+                    options=["Cumulative", "In generation"],
+                    default="Cumulative",
+                )
+                == "Cumulative"
+            )
+
     params = {
         "n_generations": n_generations,
         "latent_duration": latent_duration,
@@ -362,33 +376,20 @@ def app():
                 help=f"The probability that there are no infections in the {format_control_gens(control_generations)}, or equivalently that the {format_control_gens(control_generations - 1)} do not produce any further infections.",
             )
 
-            st.header("Number of infections")
-            with st.expander("Plot Options"):
-                generational_counts = get_generational_infection_count_df(sim_df)
-                plot_gen = st.segmented_control(
-                    "Generation to plot",
-                    options=range(1, n_generations + 1),
-                    default=n_generations,
-                )
-                cumulative = (
-                    st.segmented_control(
-                        "Show infections cumulatively or in specific generation?",
-                        options=["Cumulative", "In generation"],
-                        default="Cumulative",
-                    )
-                    == "Cumulative"
-                )
+            st.header(
+                "Number of infections",
+                help="You can change what is plotted here in the Advanced Settings.",
+            )
+            generational_counts = get_generational_infection_count_df(sim_df)
 
-                if cumulative:
-                    counts = (
-                        generational_counts.filter(pl.col("generation") <= plot_gen)
-                        .group_by("simulation")
-                        .agg(pl.col("num_infections").sum())
-                    )
-                else:
-                    counts = generational_counts.filter(
-                        pl.col("generation") == plot_gen
-                    )
+            if cumulative:
+                counts = (
+                    generational_counts.filter(pl.col("generation") <= plot_gen)
+                    .group_by("simulation")
+                    .agg(pl.col("num_infections").sum())
+                )
+            else:
+                counts = generational_counts.filter(pl.col("generation") == plot_gen)
 
             size_hist_title = f"Distribution of the {'cumulative ' if cumulative else ''}number of infections seen {'up to and including' if cumulative else 'in'} generation {plot_gen}."
             st.write(size_hist_title)
