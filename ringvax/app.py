@@ -161,14 +161,17 @@ def set_session_default(key, value) -> None:
 
 
 def get_commit(length: int = 15) -> Optional[str]:
-    x = subprocess.run(
-        ["git", "rev-parse", f"--short={length}", "HEAD"], capture_output=True
-    )
-    if x.returncode == 0:
-        commit = x.stdout.decode().strip()
-        assert len(commit) == length
-        return commit
-    else:
+    try:
+        x = subprocess.run(
+            ["git", "rev-parse", f"--short={length}", "HEAD"], capture_output=True
+        )
+        if x.returncode == 0:
+            commit = x.stdout.decode().strip()
+            assert len(commit) == length
+            return commit
+        else:
+            return None
+    except subprocess.CalledProcessError:
         return None
 
 
