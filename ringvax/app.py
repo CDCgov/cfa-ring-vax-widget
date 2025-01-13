@@ -171,7 +171,7 @@ def get_commit(length: int = 15) -> Optional[str]:
             return commit
         else:
             return None
-    except subprocess.CalledProcessError:
+    except FileNotFoundError:
         return None
 
 
