@@ -378,7 +378,7 @@ def app():
 
             st.header(
                 "Number of infections",
-                help="You can change what is plotted here in the Advanced Settings.",
+                help="This is a histogram describing the distribution of the number of infections. You can change what is plotted here in the Advanced Settings.",
             )
             generational_counts = get_infection_counts_by_generation(sim_df)
 
