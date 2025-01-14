@@ -11,7 +11,7 @@ import streamlit as st
 from ringvax import Simulation
 from ringvax.summary import (
     get_all_person_properties,
-    get_generational_infection_count_df,
+    get_infection_counts_by_generation,
     prob_control_by_gen,
     summarize_detections,
     summarize_infections,
@@ -380,7 +380,7 @@ def app():
                 "Number of infections",
                 help="You can change what is plotted here in the Advanced Settings.",
             )
-            generational_counts = get_generational_infection_count_df(sim_df)
+            generational_counts = get_infection_counts_by_generation(sim_df)
 
             if cumulative:
                 counts = (
