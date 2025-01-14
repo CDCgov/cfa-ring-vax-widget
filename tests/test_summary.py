@@ -56,3 +56,48 @@ def test_get_all_person_properties():
     # result should be a data frame of length 4
     assert isinstance(x, pl.DataFrame)
     assert x.shape[0] == 4
+
+
+def test_generational_counts():
+    params = {
+        "n_generations": 6,
+        "latent_duration": 1.0,
+        "infectious_duration": 3.0,
+        "infection_rate": 0.5,
+        "p_passive_detect": 0.5,
+        "passive_detection_delay": 2.0,
+        "p_active_detect": 0.15,
+        "active_detection_delay": 2.0,
+        "max_infections": 1000000,
+    }
+
+    n_sims = 3
+    sims = []
+    for i in range(n_sims):
+        sims.append(ringvax.Simulation(params=params, rng=np.random.default_rng(i)))
+        sims[-1].run()
+
+    all_sims = ringvax.summary.get_all_person_properties(sims)
+    max_obs_gen = [
+        max(sim.get_person_property(id, "generation") for id in sim.infections)
+        for sim in sims
+    ]
+    obs_g_max = max(max_obs_gen)
+
+    gen_counts = ringvax.summary.get_infection_counts_by_generation(all_sims)
+
+    assert gen_counts.shape[0] == (obs_g_max + 1) * n_sims
+
+    for i, sim in enumerate(sims):
+        sim_counts = gen_counts.filter(pl.col("simulation") == i)
+        assert sim_counts.shape[0] == obs_g_max + 1
+
+        for g in range(max_obs_gen[i] + 1):
+            assert sim_counts.filter(pl.col("generation") == g)["num_infections"][
+                0
+            ] == len(sim.query_people({"generation": g}))
+
+        for g in range(max_obs_gen[i] + 1, obs_g_max):
+            assert (
+                sim_counts.filter(pl.col("generation") == g)["num_infections"][0] == 0
+            )
