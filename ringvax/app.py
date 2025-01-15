@@ -391,9 +391,11 @@ def app():
             else:
                 counts = generational_counts.filter(pl.col("generation") == plot_gen)
 
-            x_lab = f"Number of infections in generation {plot_gen}"
-            if cumulative:
-                x_lab = f"Cumulative infections through generation {plot_gen}"
+            x_lab = (
+                f"Cumulative infections through generation {plot_gen}"
+                if cumulative
+                else f"Number of infections in generation {plot_gen}"
+            )
             st.altair_chart(
                 alt.Chart(counts)
                 .mark_bar()
