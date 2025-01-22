@@ -274,7 +274,7 @@ def app():
 
         with st.expander("Advanced Options"):
             n_generations = st.number_input(
-                "Number of simulated generations", value=4, step=1
+                "Number of simulated generations", value=3, step=1
             )
             control_generations = st.number_input(
                 "Degree of contacts for checking control",
