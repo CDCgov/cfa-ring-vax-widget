@@ -191,7 +191,7 @@ class TestResolveDetectionHistory:
         kwargs["potentially_passive_detected"] = True
         assert self.f(kwargs) == {
             "detected": True,
-            "t_detected": 0.0 + 5.0,
+            "t_detected": 5.0,
             "detect_method": "passive",
         }
 
