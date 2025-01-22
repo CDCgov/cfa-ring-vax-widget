@@ -233,7 +233,7 @@ class TestResolveDetectionHistory:
         kwargs["t_infector_detected"] = 5.0
         assert self.f(kwargs) == {
             "detected": True,
-            "t_detected": 0.0 + 5.0,
+            "t_detected": 5.0,
             "detect_method": "passive",
         }
 
