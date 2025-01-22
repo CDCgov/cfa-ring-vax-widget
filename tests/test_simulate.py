@@ -174,13 +174,9 @@ class TestResolveDetectionHistory:
             "t_infector_detected": None,
         }
 
-    @staticmethod
-    def f(kwargs: dict):
-        return ringvax.Simulation.resolve_detection_history(**kwargs)
-
     def test_baseline(self, kwargs):
         """No potential detections"""
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": False,
             "t_detected": None,
             "detect_method": None,
@@ -189,7 +185,7 @@ class TestResolveDetectionHistory:
     def test_passive_only(self, kwargs):
         """Passive detection only"""
         kwargs["potentially_passive_detected"] = True
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": True,
             "t_detected": 5.0,
             "detect_method": "passive",
@@ -199,7 +195,7 @@ class TestResolveDetectionHistory:
         """Passive detection after recovery"""
         kwargs["potentially_passive_detected"] = True
         kwargs["passive_detection_delay"] = 11.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": False,
             "t_detected": None,
             "detect_method": None,
@@ -209,7 +205,7 @@ class TestResolveDetectionHistory:
         """Active detection only"""
         kwargs["potentially_active_detected"] = True
         kwargs["t_infector_detected"] = 0.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": True,
             "t_detected": 0.0 + 2.0,
             "detect_method": "active",
@@ -220,7 +216,7 @@ class TestResolveDetectionHistory:
         kwargs["potentially_active_detected"] = True
         kwargs["t_infector_detected"] = 5.0
         kwargs["active_detection_delay"] = 6.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": False,
             "t_detected": None,
             "detect_method": None,
@@ -231,7 +227,7 @@ class TestResolveDetectionHistory:
         kwargs["potentially_passive_detected"] = True
         kwargs["potentially_active_detected"] = True
         kwargs["t_infector_detected"] = 5.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": True,
             "t_detected": 5.0,
             "detect_method": "passive",
@@ -242,7 +238,7 @@ class TestResolveDetectionHistory:
         kwargs["potentially_passive_detected"] = True
         kwargs["potentially_active_detected"] = True
         kwargs["t_infector_detected"] = 1.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": True,
             "t_detected": 1.0 + 2.0,
             "detect_method": "active",
@@ -254,7 +250,7 @@ class TestResolveDetectionHistory:
         kwargs["potentially_active_detected"] = True
         kwargs["t_infector_detected"] = 9.0
         kwargs["passive_detection_delay"] = 11.0
-        assert self.f(kwargs) == {
+        assert ringvax.Simulation.resolve_detection_history(**kwargs) == {
             "detected": False,
             "t_detected": None,
             "detect_method": None,
