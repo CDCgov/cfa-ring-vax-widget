@@ -413,13 +413,14 @@ def app():
                 f"In these simulations, the average duration of infectiousness was {infection['mean_infectious_duration'][0]:.2f} and $R_e$ was {infection['mean_n_infections'][0]:.2f}"
             )
 
-            st.subheader("Detection probabilities")
+            st.subheader(
+                "Detection probabilities",
+                help=f"These summaries pool all infections across all {nsim} simulations.",
+            )
             detection = summarize_detections(sim_df)
-            st.dataframe(
+            st.table(
                 detection.with_columns(
-                    pl.col("Probability")
-                    .pipe(render_percents_expr)
-                    .alias("Probability")
+                    pl.col("Percent").pipe(render_percents_expr).alias("Percent")
                 )
             )
 

@@ -74,11 +74,13 @@ def empirical_detection_prob(
     conditional_column: Optional[str] = None,
     not_: bool = False,
     numerator=False,
-) -> np.float64:
+):
     """
     Computes the proportion of cases in `df` detected by method `detect_method` ("passive", "active", or "any" (for both)) without raising errors for 0/0 division.
     Can use `conditional_column` to compute either Pr(detect | condition met) (`numerator` == False) or Pr(detect and condition met) (`numerator` == True.)
     If `not_` == True, conditioning is on !`conditional_column`.
+
+    Returns proportion, numerator count, and denominator count.
     """
     if conditional_column is not None:
         assert conditional_column in df.columns
@@ -109,7 +111,11 @@ def empirical_detection_prob(
     if numerator and conditional_column is not None:
         detections = detections.filter(pl.col(conditional_column))
 
-    return np.divide(detections.shape[0], df.shape[0])
+    return (
+        np.divide(detections.shape[0], df.shape[0]),
+        detections.shape[0],
+        df.shape[0],
+    )
 
 
 def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
@@ -134,25 +140,34 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     )
     assert df.shape[0] == n_infections
 
-    detect_method = [
-        "Any",
-        "Any",
-        "Any",
-        "Any",
+    method = [
+        "Either",
+        "Either",
+        "Either",
+        "Either",
         "Passive",
         "Active",
     ]
 
-    restriction = [
-        "None",
-        "Detect before infectious",
-        "Index case",
-        "Non-index case",
-        "Non-index case",
-        "Active-eligible",
+    event = [
+        "Detected",
+        "Detected prior to infectiousness",
+        "Detected",
+        "Detected",
+        "Detected",
+        "Detected",
     ]
 
-    detect_probs = [
+    among = [
+        "All cases",
+        "All cases",
+        "Index cases",
+        "Non-index cases",
+        "Non-index cases",
+        "Cases with detected infector",
+    ]
+
+    detect_info = [
         empirical_detection_prob(
             df,
             "any",
@@ -174,9 +189,12 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     ]
     return pl.DataFrame(
         {
-            "Method": detect_method,
-            "Restrictions": restriction,
-            "Probability": detect_probs,
+            "Event": event,
+            "Method": method,
+            "Among": among,
+            "Percent": [x[0] for x in detect_info],
+            "Numerator": [x[1] for x in detect_info],
+            "Denominator": [x[2] for x in detect_info],
         }
     )
 
