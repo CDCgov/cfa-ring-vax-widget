@@ -9,6 +9,7 @@ infection_schema = pl.Schema(
     {
         "id": pl.String,
         "infector": pl.String,
+        "simulated": pl.Boolean,
         "infectees": pl.List(pl.String),
         "generation": pl.Int64,
         "t_exposed": pl.Float64,

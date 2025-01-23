@@ -284,13 +284,6 @@ def app():
                 max_value=n_generations + 1,
                 help="Successful control is defined as no infections in contacts at this degree. Set to 1 for contacts of the index case, 2 for contacts of contacts, etc. Equivalent to checking for extinction in the specified generation.",
             )
-            max_infections = st.number_input(
-                "Maximum number of infections",
-                value=1000,
-                step=10,
-                min_value=100,
-                help="",
-            )
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
             plot_gen = st.toggle("Show infection's generation", value=False)
@@ -313,6 +306,7 @@ def app():
                 == "Cumulative"
             )
 
+    max_infections = 1000
     params = {
         "n_generations": n_generations,
         "latent_duration": latent_duration,

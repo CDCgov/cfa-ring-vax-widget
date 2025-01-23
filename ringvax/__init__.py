@@ -6,12 +6,15 @@ import numpy.random
 
 
 class Simulation:
-    PROPERTIES = {
+    INIT_PROPERTIES = {
         "id",
         "infector",
-        "infectees",
         "generation",
         "t_exposed",
+        "simulated",
+    }
+    SIM_PROPERTIES = {
+        "infectees",
         "t_infectious",
         "t_recovered",
         "infection_rate",
@@ -20,6 +23,7 @@ class Simulation:
         "t_detected",
         "infection_times",
     }
+    PROPERTIES = INIT_PROPERTIES | SIM_PROPERTIES
 
     def __init__(
         self, params: dict[str, Any], rng: Optional[numpy.random.Generator] = None
@@ -29,10 +33,17 @@ class Simulation:
         self.infections = {}
         self.termination: Optional[str] = None
 
-    def create_person(self) -> str:
+    def create_person(
+        self, infector: Optional[str], t_exposed: float, generation: int
+    ) -> str:
         """Add a new person to the data"""
         id = str(len(self.infections))
-        self.infections[id] = {x: None for x in self.PROPERTIES}
+        self.infections[id] = {
+            "infector": infector,
+            "t_exposed": t_exposed,
+            "generation": generation,
+            "simulated": False,
+        } | {x: None for x in self.SIM_PROPERTIES}
         return id
 
     def update_person(self, id: str, content: dict[str, Any]) -> None:
@@ -67,22 +78,16 @@ class Simulation:
                 if all(person[k] == v for k, v in query.items())
             ]
 
-    def register_infectee(self, infector, infectee) -> None:
-        infectees = self.get_person_property(infector, "infectees")
-        if infectees is None:
-            self.update_person(infector, {"infectees": []})
-            infectees = self.get_person_property(infector, "infectees")
-        infectees.append(infectee)
-
     def run(self) -> None:
         """Run simulation"""
-        # queue is pairs (t_exposed, infector)
+        # queue is of infection ids
         # start with the index infection
-        infection_queue: List[tuple[float, Optional[str]]] = [(0.0, None)]
+        infection_queue: List[str] = [self.create_person(None, 0.0, 0)]
 
         passed_max_generations = False
 
         while True:
+            # print(f">>> Looping, there are {len(self.query_people())} infections")
             # in each pass through this loop, we:
             # - exit the loop if needed
             # - pop one infection off the queue and instantiate it
@@ -98,24 +103,17 @@ class Simulation:
                 )
                 # exit the loop
                 break
-            elif n_infections == self.params["max_infections"]:
+            elif n_infections >= self.params["max_infections"]:
                 # we are at maximum number of infections
-                self.termination = "max_infections"
-                # exit the loop
-                break
-            elif n_infections > self.params["max_infections"]:
-                # this loop instantiates infections one at a time. we should
-                # exactly hit the maximum and not exceed it.
                 raise RuntimeError("Maximum number of infections exceeded")
 
             # find the person who is infected next
             # (the queue is time-sorted, so this is the temporally next infection)
-            t_exposed, infector = infection_queue.pop(0)
+            id = infection_queue.pop(0)
 
-            # otherwise, instantiate this infection, draw who they in turn infect,
+            # draw who they in turn infect,
             # and add the infections they cause to the queue, in time order
-            id = self.create_person()
-            self.generate_infection(id=id, t_exposed=t_exposed, infector=infector)
+            offspring = self.generate_infection(id=id)
 
             # if the infector is in the final generation, do not add their
             # infectees to the queue
@@ -129,29 +127,26 @@ class Simulation:
             else:
                 # only add infectees to the queue if we are not yet at maximum
                 # number of generations
-                for t in self.get_person_property(id, "infection_times"):
-                    bisect.insort_right(infection_queue, (t, id), key=lambda x: x[0])
+                for child in offspring:
+                    bisect.insort_right(
+                        infection_queue,
+                        child,
+                        key=lambda x: self.get_person_property(x, "t_exposed"),
+                    )
 
     def generate_infection(
-        self, id: str, t_exposed: float, infector: Optional[str]
-    ) -> None:
+        self,
+        id: str,
+    ) -> List[str]:
         """
         Generate a single infected person's biological disease history, detection
         history and transmission history
         """
-        # keep track of generations
-        if infector is None:
-            generation = 0
-        else:
-            generation = self.get_person_property(infector, "generation") + 1
-            self.register_infectee(infector, id)
-
-        self.update_person(
-            id, {"id": id, "infector": infector, "generation": generation}
-        )
 
         # disease state history in this individual
-        disease_history = self.generate_disease_history(t_exposed=t_exposed)
+        disease_history = self.generate_disease_history(
+            self.get_person_property(id, "t_exposed")
+        )
         self.update_person(id, disease_history)
 
         # whether this person was detected
@@ -182,7 +177,18 @@ class Simulation:
             assert (infection_times >= disease_history["t_infectious"]).all()
             assert (infection_times <= t_end_infectious).all()
 
-        self.update_person(id, {"infection_times": infection_times})
+        infectees = [
+            self.create_person(id, time, self.get_person_property(id, "generation"))
+            for time in infection_times
+        ]
+        self.update_person(
+            id, {"infection_times": infection_times, "infectees": infectees}
+        )
+
+        # mark this person as simulated
+        self.update_person(id, {"simulated": True})
+
+        return infectees
 
     def generate_disease_history(self, t_exposed: float) -> dict[str, Any]:
         """Generate infection history for a single infected person"""
