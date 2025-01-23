@@ -13,6 +13,11 @@ def rng():
     return numpy.random.default_rng(1234)
 
 
+@pytest.fixture
+def snap_rng():
+    return numpy.random.default_rng(42)
+
+
 def test_infection_delays_zero_rate(rng):
     """If zero rate, zero infections"""
     assert (
@@ -101,27 +106,27 @@ def base_params():
 def test_simulate(rng, base_params):
     s = ringvax.Simulation(params=base_params, rng=rng)
     s.run()
-    assert len(s.infections) == 29
+    assert len(s.query_people({"simulated": True})) == 29
 
 
 def test_simulate_max_infections(rng, base_params):
     params = base_params
     params["max_infections"] = 10
-    s = ringvax.Simulation(params=params, rng=rng)
-    s.run()
-    assert len(s.infections) == 10
+    with pytest.raises(RuntimeError, match="exceeded"):
+        s = ringvax.Simulation(params=params, rng=rng)
+        s.run()
 
 
 def test_simulate_set_field(rng, base_params):
     s = ringvax.Simulation(params=base_params, rng=rng)
-    id = s.create_person()
+    id = s.create_person(infector=None, t_exposed=0.0, generation=0)
     s.update_person(id, {"generation": 0})
     assert s.get_person_property(id, "generation") == 0
 
 
 def test_simulate_error_on_bad_get_property(rng, base_params):
     s = ringvax.Simulation(params=base_params, rng=rng)
-    id = s.create_person()
+    id = s.create_person(infector=None, t_exposed=0.0, generation=0)
 
     with pytest.raises(RuntimeError, match="foo"):
         s.get_person_property(id, "foo")
@@ -129,7 +134,7 @@ def test_simulate_error_on_bad_get_property(rng, base_params):
 
 def test_simulate_error_on_bad_update_property(rng, base_params):
     s = ringvax.Simulation(params=base_params, rng=rng)
-    id = s.create_person()
+    id = s.create_person(infector=None, t_exposed=0.0, generation=0)
 
     with pytest.raises(RuntimeError, match="foo"):
         s.update_person(id, {"foo": 0})
@@ -145,7 +150,6 @@ def test_snapshot(rng):
         "passive_detection_delay": 4.0,
         "p_active_detect": 0.5,
         "active_detection_delay": 2.0,
-        "max_infections": 100,
     }
     s = ringvax.Simulation(params=params, rng=rng)
     s.run()
