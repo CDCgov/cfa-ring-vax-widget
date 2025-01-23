@@ -87,7 +87,6 @@ class Simulation:
         passed_max_generations = False
 
         while True:
-            # print(f">>> Looping, there are {len(self.query_people())} infections")
             # in each pass through this loop, we:
             # - exit the loop if needed
             # - pop one infection off the queue and instantiate it
@@ -178,7 +177,7 @@ class Simulation:
             assert (infection_times <= t_end_infectious).all()
 
         infectees = [
-            self.create_person(id, time, self.get_person_property(id, "generation"))
+            self.create_person(id, time, self.get_person_property(id, "generation") + 1)
             for time in infection_times
         ]
         self.update_person(
