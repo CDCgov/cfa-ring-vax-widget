@@ -39,6 +39,7 @@ class Simulation:
         """Add a new person to the data"""
         id = str(len(self.infections))
         self.infections[id] = {
+            "id": id,
             "infector": infector,
             "t_exposed": t_exposed,
             "generation": generation,
