@@ -9,6 +9,7 @@ infection_schema = pl.Schema(
     {
         "id": pl.String,
         "infector": pl.String,
+        "simulated": pl.Boolean,
         "infectees": pl.List(pl.String),
         "generation": pl.Int64,
         "t_exposed": pl.Float64,
@@ -29,7 +30,8 @@ assert set(infection_schema.keys()) == Simulation.PROPERTIES
 
 
 def get_all_person_properties(
-    sims: Sequence[Simulation], exclude_termination_if: list[str] = ["max_infections"]
+    sims: Sequence[Simulation],
+    exclude_termination_if: list[str] = [],
 ) -> pl.DataFrame:
     """
     Get a dataframe of all properties of all infections
@@ -82,6 +84,8 @@ def empirical_detection_prob(
 
     Returns proportion, numerator count, and denominator count.
     """
+    df = df.filter(pl.col("simulated"))
+
     if conditional_column is not None:
         assert conditional_column in df.columns
         assert df.schema[conditional_column] == pl.Boolean
@@ -122,6 +126,7 @@ def summarize_detections(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get marginal detection probabilities from simulations.
     """
+    df = df.filter(pl.col("simulated"))
     n_infections = df.shape[0]
 
     # Add in eligibility conditions
@@ -203,13 +208,17 @@ def summarize_infections(df: pl.DataFrame) -> pl.DataFrame:
     """
     Get summaries of infectiousness from simulations.
     """
-    df = df.with_columns(
-        n_infections=pl.col("infection_times").list.len(),
-        t_noninfectious=pl.min_horizontal(
-            [pl.col("t_detected"), pl.col("t_recovered")]
-        ),
-    ).with_columns(
-        duration_infectious=(pl.col("t_noninfectious") - pl.col("t_infectious"))
+    df = (
+        df.filter(pl.col("simulated"))
+        .with_columns(
+            n_infections=pl.col("infection_times").list.len(),
+            t_noninfectious=pl.min_horizontal(
+                [pl.col("t_detected"), pl.col("t_recovered")]
+            ),
+        )
+        .with_columns(
+            duration_infectious=(pl.col("t_noninfectious") - pl.col("t_infectious"))
+        )
     )
 
     return pl.DataFrame(
@@ -229,15 +238,11 @@ def prob_control_by_gen(df: pl.DataFrame, gen: int) -> float:
     """
     n_sim = df["simulation"].unique().len()
     size_at_gen = (
-        df.with_columns(
-            pl.col("generation") + 1,
-            n_infections=pl.col("infection_times").list.len(),
-        )
-        .with_columns(size=pl.sum("n_infections").over("simulation", "generation"))
-        .unique(subset=["simulation", "generation"])
+        df.group_by("simulation", "generation")
+        .agg(n_infections=pl.len())
         .filter(
             pl.col("generation") == gen,
-            pl.col("size") > 0,
+            pl.col("n_infections") > 0,
         )
     )
     return 1.0 - (size_at_gen.shape[0] / n_sim)

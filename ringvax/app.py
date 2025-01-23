@@ -46,8 +46,15 @@ def run_simulations(n: int, params: dict, seed: int) -> List[Simulation]:
     for i in range(n):
         progress_bar.progress(i / n, text=progress_text)
         sim = Simulation(params=params, rng=rngs[i])
-        sim.run()
-        sims.append(sim)
+        try:
+            sim.run()
+            sims.append(sim)
+        except Exception as e:
+            if not (
+                isinstance(e, RuntimeError)
+                and str(e) == "Maximum number of infections exceeded"
+            ):
+                raise (e)
 
     progress_bar.empty()
     toc = time.perf_counter()
@@ -284,13 +291,6 @@ def app():
                 max_value=n_generations + 1,
                 help="Successful control is defined as no infections in contacts at this degree. Set to 1 for contacts of the index case, 2 for contacts of contacts, etc. Equivalent to checking for extinction in the specified generation.",
             )
-            max_infections = st.number_input(
-                "Maximum number of infections",
-                value=1000,
-                step=10,
-                min_value=100,
-                help="",
-            )
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
             plot_gen = st.toggle("Show infection's generation", value=False)
@@ -313,6 +313,7 @@ def app():
                 == "Cumulative"
             )
 
+    max_infections = 1000000
     params = {
         "n_generations": n_generations,
         "latent_duration": latent_duration,
@@ -329,13 +330,13 @@ def app():
 
     sims = run_simulations(n=nsim, params=params, seed=seed)
 
-    n_at_max = sum(1 for sim in sims if sim.termination == "max_infections")
+    n_at_max = nsim - len(sims)
 
     show = True if n_at_max == 0 else False
     if not show:
         st.warning(
             body=(
-                f"{n_at_max} simulations hit the specified maximum number of infections ({max_infections})."
+                f"{n_at_max} simulations hit the maximum number of infections ({max_infections})."
             ),
             icon="🚨",
         )
