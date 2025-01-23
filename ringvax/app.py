@@ -306,7 +306,7 @@ def app():
                 == "Cumulative"
             )
 
-    max_infections = 1000
+    max_infections = 1000000
     params = {
         "n_generations": n_generations,
         "latent_duration": latent_duration,

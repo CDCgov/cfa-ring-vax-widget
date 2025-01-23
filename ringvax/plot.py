@@ -225,7 +225,11 @@ def get_infection_time_tuples(id: str, sim: Simulation):
     if infectees is None or len(infectees) == 0:
         return None
 
-    return [(sim.get_person_property(inf, "t_exposed"), inf) for inf in infectees]
+    return [
+        (sim.get_person_property(inf, "t_exposed"), inf)
+        for inf in infectees
+        if sim.get_person_property(inf, "simulated")
+    ]
 
 
 def order_descendants(sim: Simulation):
@@ -257,6 +261,7 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
     Get parameters for plotting this simulation
     """
     plot_order = order_descendants(sim)
+    print(plot_order)
 
     return {
         "annotate_generation": True,
@@ -282,21 +287,21 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
             0.0,
             max(
                 sim.get_person_property(id, stage_map["infectious"]["end"])
-                for id in sim.infections.keys()
+                for id in sim.query_people({"simulated": True})
             ),
         ],
-        "y_range": [-1.0, len(sim.infections)],
+        "y_range": [-1.0, len(sim.query_people({"simulated": True}))],
     }
 
 
 def plot_simulation(sim: Simulation, par: dict[str, Any]):
-    n_inf = len(sim.query_people())
+    n_inf = len(sim.query_people({"simulated": True}))
 
     plot_par = make_plot_par(sim) | par
 
     fig, ax = plt.subplots()
 
-    for inf in sim.query_people():
+    for inf in sim.query_people({"simulated": True}):
         draw_stages(ax, inf, sim, plot_par)
 
         mark_infections(ax, inf, sim, plot_par)
