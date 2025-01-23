@@ -46,8 +46,15 @@ def run_simulations(n: int, params: dict, seed: int) -> List[Simulation]:
     for i in range(n):
         progress_bar.progress(i / n, text=progress_text)
         sim = Simulation(params=params, rng=rngs[i])
-        sim.run()
-        sims.append(sim)
+        try:
+            sim.run()
+            sims.append(sim)
+        except Exception as e:
+            if not (
+                isinstance(e, RuntimeError)
+                and str(e) == "Maximum number of infections exceeded"
+            ):
+                raise (e)
 
     progress_bar.empty()
     toc = time.perf_counter()
@@ -323,13 +330,13 @@ def app():
 
     sims = run_simulations(n=nsim, params=params, seed=seed)
 
-    n_at_max = sum(1 for sim in sims if sim.termination == "max_infections")
+    n_at_max = nsim - len(sims)
 
     show = True if n_at_max == 0 else False
     if not show:
         st.warning(
             body=(
-                f"{n_at_max} simulations hit the specified maximum number of infections ({max_infections})."
+                f"{n_at_max} simulations hit the maximum number of infections ({max_infections})."
             ),
             icon="🚨",
         )

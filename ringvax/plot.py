@@ -261,7 +261,6 @@ def make_plot_par(sim: Simulation, show_counterfactual=True):
     Get parameters for plotting this simulation
     """
     plot_order = order_descendants(sim)
-    print(plot_order)
 
     return {
         "annotate_generation": True,
