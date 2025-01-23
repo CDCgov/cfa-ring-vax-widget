@@ -150,12 +150,14 @@ def test_snapshot(rng):
         "passive_detection_delay": 4.0,
         "p_active_detect": 0.5,
         "active_detection_delay": 2.0,
+        "max_infections": 1000000,
     }
     s = ringvax.Simulation(params=params, rng=rng)
     s.run()
 
     for x in s.infections.values():
-        x["infection_times"] = x["infection_times"].tolist()
+        if x["infection_times"] is not None:
+            x["infection_times"] = x["infection_times"].tolist()
 
     with open(Path("tests", "data", "snapshot.json")) as f:
         snapshot = json.load(f)
