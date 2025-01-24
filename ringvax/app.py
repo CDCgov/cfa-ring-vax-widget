@@ -294,11 +294,6 @@ def app():
             seed = st.number_input("Random seed", value=1234, step=1)
             nsim = st.number_input("Number of simulations", value=250, step=1)
             plot_gen = st.toggle("Show infection's generation", value=False)
-
-        commit = get_commit()
-        if commit is not None:
-            st.caption(f"App version: {commit}")
-
             plot_gen = st.segmented_control(
                 "Generation to plot",
                 options=range(1, n_generations + 1),
@@ -312,6 +307,10 @@ def app():
                 )
                 == "Cumulative"
             )
+
+        commit = get_commit()
+        if commit is not None:
+            st.caption(f"App version: {commit}")
 
     params = {
         "n_generations": n_generations,
