@@ -78,7 +78,7 @@ But replacing Dirac delta distributions with other probability distributions for
 
 ## Analysis
 
-- Define a "successful" simulation as one with zero 3rd-generation infections
+- Define a "successful" simulation as one with zero 3rd-generation infections (i.e., no infected contacts-of-contacts-of-contacts)
 
 ## Project Admins
 
