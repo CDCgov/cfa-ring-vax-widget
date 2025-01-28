@@ -40,7 +40,7 @@ Note that we the model does not track (and indeed has no notion of) susceptibles
     index case does not self-detect, this is not an automatic fail, since they
     might not infect anyone, or their infectees might self-detect.
 - Contact tracing (i.e., active detection)
-  - Every detected infection (whether passive or active) automatically triggers contact tracing
+  - Every detected infection (whether passive or active) automatically contact tracing
   - Contact tracing has an independent probability of detecting each infection
     caused by the detected infection
     - N.B.: To actually _be_ actively detected, the detection must occur at a time before recovery and before being detected by other means.
