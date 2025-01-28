@@ -274,11 +274,15 @@ def app():
 
         with st.expander("Advanced Options"):
             n_generations = st.number_input(
-                "Number of simulated generations", value=3, step=1
+                "Final generation simulated",
+                min_value=1,
+                value=3,
+                step=1,
+                help="The first generation are infections caused by the index case, the second generation are cases caused by the first generation, and so forth.",
             )
             control_generations = st.number_input(
                 "Degree of contacts for checking control",
-                value=3,
+                value=n_generations,
                 step=1,
                 min_value=1,
                 max_value=n_generations + 1,
