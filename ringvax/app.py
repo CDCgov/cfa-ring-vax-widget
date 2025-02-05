@@ -172,6 +172,54 @@ def get_commit(length: int = 15) -> Optional[str]:
         return None
 
 
+def generational_summary(
+    df: pl.DataFrame, n_sims: int, n_generations: int, alpha=0.05
+) -> alt.Chart | alt.LayerChart:
+    """Plot of number of infections by generation, summarized over simulations
+
+    Args:
+        df (pl.DataFrame): columns `simulation`, `generation`, and `num_infections`. Assumed
+          that only simulations/generation combos with >0 infections appears in the table.
+        n_sims (int): Total number of simulations (to account for missing simulation/generation
+          combos in `df`.)
+        n_generations (int): Number of generations to plot (beyond the index)
+        alpha (float, optional): Confidence interval specification. Defaults to 0.05.
+
+    Returns:
+        alt.Chart | alt.LayerChart: Plot showing median and CI across simulations, by generation
+    """
+    assert set(df.schema.names()) == {"simulation", "generation", "num_infections"}
+
+    # create a "complete" data frame, including all simulation+generation combinations
+    complete_data = (
+        pl.DataFrame({"simulation": range(n_sims)})
+        .join(pl.DataFrame({"generation": range(1, n_generations + 1)}), how="cross")
+        .join(df, on=["simulation", "generation"], how="left")
+        .with_columns(pl.col("num_infections").fill_null(value=0))
+        .sort(["simulation", "generation"])
+    )
+
+    plot_data = complete_data.group_by("generation").agg(
+        pl.col("num_infections").median().alias("median"),
+        pl.col("num_infections").quantile(alpha / 2).alias("lci"),
+        pl.col("num_infections").quantile(1.0 - alpha / 2).alias("uci"),
+    )
+
+    st.dataframe(plot_data)
+
+    base = alt.Chart(plot_data)
+    cone = base.mark_area(opacity=0.3).encode(
+        x="generation:N",
+        y2="lci",
+        y=alt.Y(
+            "uci", title=f"No. of infections (median, {round(100 * (1 - alpha))}% CI)"
+        ),
+    )
+    line = base.mark_line().encode(x="generation:N", y="median")
+
+    return cone + line
+
+
 def app():
     st.info(
         "This interactive application is a prototype designed for software testing and educational purposes."
@@ -403,6 +451,13 @@ def app():
                 .encode(
                     x=alt.X("num_infections:Q", bin=True, title=x_lab),
                     y=alt.Y("count()", title="Number of simulations"),
+                )
+            )
+
+            st.subheader("Infections by generation")
+            st.altair_chart(
+                generational_summary(
+                    generational_counts, n_sims=nsim, n_generations=n_generations
                 )
             )
 
