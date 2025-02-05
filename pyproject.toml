@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ringvax"
-version = "0.1.1"
+version = "0.2.0"
 description = ""
 authors = ["Scott Olesen <ulp7@cdc.gov>", "Andy Magee <rzg0@cdc.gov>", "Paige Miller <yub1@cdc.gov>"]
 readme = "README.md"
