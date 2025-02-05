@@ -205,8 +205,6 @@ def generational_summary(
         pl.col("num_infections").quantile(1.0 - alpha / 2).alias("uci"),
     )
 
-    st.dataframe(plot_data)
-
     base = alt.Chart(plot_data)
     cone = base.mark_area(opacity=0.3).encode(
         x="generation:N",
