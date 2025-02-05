@@ -1,4 +1,4 @@
-import subprocess
+import importlib.metadata
 import time
 from typing import List, Optional
 
@@ -157,21 +157,6 @@ def set_session_default(key, value) -> None:
         st.session_state[key] = value
 
 
-def get_commit(length: int = 15) -> Optional[str]:
-    try:
-        x = subprocess.run(
-            ["git", "rev-parse", f"--short={length}", "HEAD"], capture_output=True
-        )
-        if x.returncode == 0:
-            commit = x.stdout.decode().strip()
-            assert len(commit) == length
-            return commit
-        else:
-            return None
-    except FileNotFoundError:
-        return None
-
-
 def app():
     st.info(
         "This interactive application is a prototype designed for software testing and educational purposes."
@@ -312,9 +297,7 @@ def app():
                 == "Cumulative"
             )
 
-        commit = get_commit()
-        if commit is not None:
-            st.caption(f"App version: {commit}")
+        st.caption(f"App version: {importlib.metadata.version('ringvax')}")
 
     params = {
         "n_generations": n_generations,
