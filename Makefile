@@ -1,13 +1,20 @@
-ENGINE = podman
 TARGET = ringvax
 
-.PHONY: run build_container run_container
+.PHONY: local deploy clean
 
-run:
-	streamlit run ringvax/app.py
+local:
+	poetry run streamlit run app.py
 
-build_container:
-	$(ENGINE) build -t $(TARGET) -f Dockerfile
+deploy: manifest.json requirements.txt
+	rsconnect deploy \
+		manifest manifest.json \
+		--title $(TARGET)
 
-run_container:
-	$(ENGINE) run -p 8501:8501 --rm $(TARGET)
+manifest.json requirements.txt: app.py pyproject.toml poetry.lock app.py
+	rm -f requirements.txt
+	rsconnect write-manifest streamlit . \
+		--overwrite \
+		--exclude Makefile --exclude README.md
+
+clean:
+	rm -f manifest.json requirements.txt
