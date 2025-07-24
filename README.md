@@ -84,7 +84,6 @@ But replacing Dirac delta distributions with other probability distributions for
 
 - Scott Olesen (CDC/CFA) <ulp7@cdc.gov>
 - Andy Magee (CDC/CFA) <rzg0@cdc.gov>
-- Paige Miller (CDC/CFA) <yub1@cdc.gov>
 
 ## General Disclaimer
 
