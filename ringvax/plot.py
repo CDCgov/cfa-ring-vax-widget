@@ -204,9 +204,9 @@ def connect_child_infections(ax, id, sim: Simulation, plot_par):
     times_infections = get_infection_time_tuples(id, sim)
     if times_infections is not None:
         for t, inf in times_infections:
-            assert (
-                sim.infections[inf]["t_exposed"] == t
-            ), f"Child {inf} reports infection at time {sim.infections[inf]['t_exposed']} while parent reports time was {t}"
+            assert sim.infections[inf]["t_exposed"] == t, (
+                f"Child {inf} reports infection at time {sim.infections[inf]['t_exposed']} while parent reports time was {t}"
+            )
             y_child = plot_par["height"][inf]
             y = np.linspace(
                 y_child - plot_par["history_thickness"] / 2.0,
