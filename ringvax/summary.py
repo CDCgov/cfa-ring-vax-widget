@@ -34,13 +34,13 @@ def get_all_person_properties(
     """
     Get a dataframe of all properties of all infections
     """
-    assert (
-        len(set(sim.params["n_generations"] for sim in sims)) == 1
-    ), "Aggregating simulations with different `n_generations` is nonsensical"
+    assert len(set(sim.params["n_generations"] for sim in sims)) == 1, (
+        "Aggregating simulations with different `n_generations` is nonsensical"
+    )
 
-    assert (
-        len(set(sim.params["max_infections"] for sim in sims)) == 1
-    ), "Aggregating simulations with different `max_infections` is nonsensical"
+    assert len(set(sim.params["max_infections"] for sim in sims)) == 1, (
+        "Aggregating simulations with different `max_infections` is nonsensical"
+    )
 
     return pl.concat(
         [
@@ -101,9 +101,9 @@ def empirical_detection_prob(
     if detect_method == "any":
         match_methods = all_methods
     else:
-        assert (
-            detect_method in all_methods
-        ), f"Unrecognized detection method {detect_method}"
+        assert detect_method in all_methods, (
+            f"Unrecognized detection method {detect_method}"
+        )
         match_methods = [detect_method]
 
     detections = df.filter(pl.col("detect_method").is_in(match_methods))

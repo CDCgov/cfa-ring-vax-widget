@@ -18,6 +18,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest>=8.3.4,<9"]
+docs = [
+    "zensical>=0.0.31",
+]
 
 [tool.uv]
 default-groups = "all"
