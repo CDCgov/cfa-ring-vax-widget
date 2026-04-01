@@ -3,14 +3,14 @@ TARGET = ringvax
 .PHONY: local deploy clean
 
 local:
-	poetry run streamlit run app.py
+	streamlit run app.py
 
 deploy: manifest.json requirements.txt
 	rsconnect deploy \
 		manifest manifest.json \
 		--title $(TARGET)
 
-manifest.json requirements.txt: app.py pyproject.toml poetry.lock app.py
+manifest.json requirements.txt: app.py pyproject.toml uv.lock
 	rm -f requirements.txt
 	rsconnect write-manifest streamlit . \
 		--overwrite \

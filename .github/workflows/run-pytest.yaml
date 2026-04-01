@@ -1,4 +1,4 @@
-name: Run Pytest
+name: Run pytest
 
 on:
   pull_request:
@@ -10,18 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - run: pipx install poetry==2.1.1
+      - name: Set up python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
-    - name: Setup python
-      uses: actions/setup-python@v5
-      with:
-        cache: poetry
-
-    - name: Install test
-      run: poetry install
-
-    - name: Test
-      run: poetry run pytest -v
+      - name: Test
+        run: |
+          uv sync --all-extras --all-groups
+          uv run pytest -v
